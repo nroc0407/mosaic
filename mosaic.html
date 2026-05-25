@@ -268,6 +268,9 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  .erase-active #canvasWrap { cursor: crosshair; }
+  .erase-active #canvasWrap canvas { outline: 2px solid var(--accent); outline-offset: -2px; }
+
   .checker-bg {
     background-image:
       linear-gradient(45deg, #1a1a26 25%, transparent 25%),
@@ -363,6 +366,50 @@
         </div>
         <input type="range" id="colorCount" min="2" max="256" value="256" step="1">
       </div>
+    </div>
+
+    <div class="card" id="eraseCard">
+      <div class="card-label">색상 지우기</div>
+
+      <div style="font-size:0.65rem;color:var(--muted);line-height:1.7;margin-bottom:14px;">
+        캔버스를 <strong style="color:var(--accent2)">클릭</strong>하면 해당 색상과<br>연결된 영역을 삭제합니다.
+      </div>
+
+      <!-- 모드 토글 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;">
+        <button class="erase-mode-btn active" id="modeFlood" data-mode="flood"
+          style="background:none;border:1px solid var(--accent);color:var(--accent);font-family:'Space Mono',monospace;font-size:0.6rem;letter-spacing:0.08em;padding:8px 4px;cursor:pointer;text-align:center;line-height:1.5;transition:all .15s;">
+          <span style="display:block;font-size:0.7rem;font-weight:700;">FLOOD</span>연결된 영역만
+        </button>
+        <button class="erase-mode-btn" id="modeGlobal" data-mode="global"
+          style="background:none;border:1px solid var(--border);color:var(--muted);font-family:'Space Mono',monospace;font-size:0.6rem;letter-spacing:0.08em;padding:8px 4px;cursor:pointer;text-align:center;line-height:1.5;transition:all .15s;">
+          <span style="display:block;font-size:0.7rem;font-weight:700;">GLOBAL</span>이미지 전체
+        </button>
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-header">
+          <span>허용 오차</span>
+          <span class="slider-val" id="toleranceVal">30</span>
+        </div>
+        <input type="range" id="toleranceSlider" min="0" max="150" value="30" step="1">
+      </div>
+
+      <div class="divider"></div>
+
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+        <div id="eraseColorPreview" style="width:28px;height:28px;border:1px solid var(--border);background:#888;flex-shrink:0;"></div>
+        <div style="font-size:0.6rem;color:var(--muted);line-height:1.5;">
+          마지막 클릭 색상<br>
+          <span id="eraseColorHex" style="color:var(--accent2);letter-spacing:0.1em;">—</span>
+        </div>
+      </div>
+
+      <button class="btn btn-ghost" id="undoEraseBtn" disabled style="margin-bottom:6px;">↩ 되돌리기</button>
+      <button class="btn" id="eraseToggleBtn"
+        style="background:rgba(255,60,95,0.15);color:var(--accent);border:1px solid var(--accent);font-family:'Space Mono',monospace;font-size:0.72rem;letter-spacing:0.15em;text-transform:uppercase;font-weight:700;padding:12px;cursor:pointer;">
+        ✕ 지우기 모드 ON
+      </button>
     </div>
 
     <div class="card" style="display:flex;flex-direction:column;gap:10px;">
@@ -649,6 +696,135 @@
   }
 
   function clamp(v) { return Math.max(0, Math.min(255, Math.round(v))); }
+
+  // ══════════════════════════════════════════════════
+  //  색상 지우기 (Flood Fill / Global)
+  // ══════════════════════════════════════════════════
+  let eraseMode = false;
+  let eraseType = 'flood'; // 'flood' | 'global'
+  let eraseHistory = []; // ImageData 스냅샷 스택
+
+  const eraseToggleBtn = document.getElementById('eraseToggleBtn');
+  const undoEraseBtn   = document.getElementById('undoEraseBtn');
+  const toleranceSlider = document.getElementById('toleranceSlider');
+  const toleranceVal   = document.getElementById('toleranceVal');
+  const eraseColorPreview = document.getElementById('eraseColorPreview');
+  const eraseColorHex  = document.getElementById('eraseColorHex');
+
+  toleranceSlider.addEventListener('input', () => {
+    toleranceVal.textContent = toleranceSlider.value;
+  });
+
+  // 모드 버튼 전환
+  document.querySelectorAll('.erase-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      eraseType = btn.dataset.mode;
+      document.querySelectorAll('.erase-mode-btn').forEach(b => {
+        const isActive = b.dataset.mode === eraseType;
+        b.style.borderColor = isActive ? 'var(--accent)' : 'var(--border)';
+        b.style.color = isActive ? 'var(--accent)' : 'var(--muted)';
+        b.style.background = isActive ? 'rgba(255,60,95,0.1)' : 'none';
+        b.querySelector('span').style.color = isActive ? 'var(--accent)' : 'var(--text)';
+      });
+    });
+  });
+
+  // 지우기 모드 ON/OFF
+  eraseToggleBtn.addEventListener('click', () => {
+    eraseMode = !eraseMode;
+    document.body.classList.toggle('erase-active', eraseMode);
+    eraseToggleBtn.textContent = eraseMode ? '✕ 지우기 모드 OFF' : '✕ 지우기 모드 ON';
+    eraseToggleBtn.style.background = eraseMode ? 'rgba(255,60,95,0.35)' : 'rgba(255,60,95,0.15)';
+  });
+
+  // 되돌리기
+  undoEraseBtn.addEventListener('click', () => {
+    if (eraseHistory.length === 0) return;
+    const snap = eraseHistory.pop();
+    ctx.putImageData(snap, 0, 0);
+    undoEraseBtn.disabled = eraseHistory.length === 0;
+  });
+
+  // 캔버스 클릭 → 지우기
+  outputCanvas.addEventListener('click', e => {
+    if (!eraseMode) return;
+
+    // 캔버스 내 실제 픽셀 좌표 계산
+    const rect = outputCanvas.getBoundingClientRect();
+    const scaleX = outputCanvas.width  / rect.width;
+    const scaleY = outputCanvas.height / rect.height;
+    const px = Math.floor((e.clientX - rect.left)  * scaleX);
+    const py = Math.floor((e.clientY - rect.top)   * scaleY);
+
+    if (px < 0 || py < 0 || px >= outputCanvas.width || py >= outputCanvas.height) return;
+
+    // 스냅샷 저장
+    eraseHistory.push(ctx.getImageData(0, 0, outputCanvas.width, outputCanvas.height));
+    if (eraseHistory.length > 30) eraseHistory.shift();
+    undoEraseBtn.disabled = false;
+
+    const imageData = ctx.getImageData(0, 0, outputCanvas.width, outputCanvas.height);
+    const data = imageData.data;
+    const tol  = parseInt(toleranceSlider.value);
+    const idx  = (py * outputCanvas.width + px) * 4;
+    const tr = data[idx], tg = data[idx+1], tb = data[idx+2];
+
+    // UI 미리보기 갱신
+    const hex = '#' + [tr,tg,tb].map(v=>v.toString(16).padStart(2,'0')).join('');
+    eraseColorPreview.style.background = hex;
+    eraseColorHex.textContent = hex.toUpperCase();
+
+    if (eraseType === 'global') {
+      eraseGlobal(data, tr, tg, tb, tol);
+    } else {
+      eraseFlood(data, outputCanvas.width, outputCanvas.height, px, py, tr, tg, tb, tol);
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+  });
+
+  function colorDist(r,g,b, tr,tg,tb) {
+    return Math.sqrt((r-tr)**2 + (g-tg)**2 + (b-tb)**2);
+  }
+
+  // 이미지 전체에서 유사 색상 픽셀 삭제
+  function eraseGlobal(data, tr, tg, tb, tol) {
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i+3] === 0) continue;
+      if (colorDist(data[i],data[i+1],data[i+2], tr,tg,tb) <= tol) {
+        data[i+3] = 0;
+      }
+    }
+  }
+
+  // Flood Fill: 클릭 지점과 연결된 유사색 픽셀만 삭제 (BFS, 4-연결)
+  function eraseFlood(data, w, h, sx, sy, tr, tg, tb, tol) {
+    const visited = new Uint8Array(w * h);
+    const queue = [[sx, sy]];
+    visited[sy * w + sx] = 1;
+
+    while (queue.length > 0) {
+      const [x, y] = queue.shift();
+      const i = (y * w + x) * 4;
+      if (data[i+3] === 0) continue; // 이미 투명
+      if (colorDist(data[i],data[i+1],data[i+2], tr,tg,tb) > tol) continue;
+
+      data[i+3] = 0; // 투명 처리
+
+      const neighbors = [[x-1,y],[x+1,y],[x,y-1],[x,y+1]];
+      for (const [nx, ny] of neighbors) {
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const ni = ny * w + nx;
+        if (visited[ni]) continue;
+        visited[ni] = 1;
+        const di = ni * 4;
+        if (data[di+3] === 0) continue;
+        if (colorDist(data[di],data[di+1],data[di+2], tr,tg,tb) <= tol) {
+          queue.push([nx, ny]);
+        }
+      }
+    }
+  }
 </script>
 </body>
 </html>
