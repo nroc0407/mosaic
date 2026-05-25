@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>MOSAIC</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&display=swap');
@@ -43,10 +43,13 @@
   header::after {
     content: '';
     position: absolute;
-    bottom: -2px; left: 0;
-    width: 160px; height: 2px;
+    bottom: -2px;
+    left: 0;
+    width: 160px;
+    height: 2px;
     background: var(--accent);
   }
+
   h1 {
     font-family: 'Bebas Neue', sans-serif;
     font-size: 3.2rem;
@@ -54,6 +57,7 @@
     color: var(--text);
     line-height: 1;
   }
+
   .tag {
     font-size: 0.65rem;
     color: var(--accent2);
@@ -66,10 +70,10 @@
 
   .workspace {
     width: 100%;
-    max-width: 1100px;
+    max-width: 1180px;
     padding: 40px 24px 0;
     display: grid;
-    grid-template-columns: 280px 1fr;
+    grid-template-columns: 310px 1fr;
     gap: 24px;
   }
 
@@ -109,12 +113,22 @@
     cursor: pointer;
     transition: all 0.2s;
   }
-  .drop-zone:hover, .drop-zone.drag-over {
+  .drop-zone:hover,
+  .drop-zone.drag-over {
     border-color: var(--accent);
     background: rgba(255,60,95,0.04);
   }
-  .drop-zone .icon { font-size: 2rem; margin-bottom: 10px; display: block; opacity: 0.5; }
-  .drop-zone p { font-size: 0.7rem; color: var(--muted); line-height: 1.7; }
+  .drop-zone .icon {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    display: block;
+    opacity: 0.5;
+  }
+  .drop-zone p {
+    font-size: 0.7rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
   .drop-zone strong { color: var(--accent); }
   #fileInput { display: none; }
 
@@ -125,14 +139,24 @@
     margin-bottom: 14px;
   }
   .slider-row:last-child { margin-bottom: 0; }
+
   .slider-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     font-size: 0.72rem;
   }
-  .slider-header span:first-child { color: var(--muted); letter-spacing: 0.05em; }
-  .slider-val { color: var(--accent2); font-weight: 700; min-width: 40px; text-align: right; }
+  .slider-header span:first-child {
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  .slider-val {
+    color: var(--accent2);
+    font-weight: 700;
+    min-width: 52px;
+    text-align: right;
+  }
 
   input[type=range] {
     -webkit-appearance: none;
@@ -144,7 +168,8 @@
   }
   input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 14px; height: 14px;
+    width: 14px;
+    height: 14px;
     background: var(--accent);
     border-radius: 0;
     cursor: pointer;
@@ -152,14 +177,9 @@
   }
   input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.3); }
 
-  /* 색상 비트 프리셋 버튼 */
-  .bit-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-    margin-bottom: 14px;
-  }
-  .bit-btn {
+  .option-grid { display: grid; gap: 6px; margin-bottom: 14px; }
+
+  .option-btn {
     background: none;
     border: 1px solid var(--border);
     color: var(--muted);
@@ -172,10 +192,19 @@
     text-align: center;
     line-height: 1.5;
   }
-  .bit-btn .bit-name { display: block; color: var(--text); font-size: 0.65rem; font-weight: 700; }
-  .bit-btn:hover { border-color: var(--accent2); }
-  .bit-btn.active { background: rgba(255,60,95,0.12); border-color: var(--accent); color: var(--accent); }
-  .bit-btn.active .bit-name { color: var(--accent); }
+  .option-btn strong {
+    display: block;
+    color: var(--text);
+    font-size: 0.65rem;
+    font-weight: 700;
+  }
+  .option-btn:hover { border-color: var(--accent2); }
+  .option-btn.active {
+    background: rgba(255,60,95,0.12);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .option-btn.active strong { color: var(--accent); }
 
   .divider {
     height: 1px;
@@ -195,10 +224,11 @@
     transition: all 0.15s;
     font-weight: 700;
   }
-  .btn-primary { background: var(--accent); color: #fff; }
-  .btn-primary:hover { background: #ff5577; }
-  .btn-primary:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
-  .btn-ghost { background: none; color: var(--accent2); border: 1px solid var(--accent2); }
+  .btn-ghost {
+    background: none;
+    color: var(--accent2);
+    border: 1px solid var(--accent2);
+  }
   .btn-ghost:hover { background: rgba(0,229,255,0.08); }
   .btn-ghost:disabled { opacity: 0.3; cursor: not-allowed; }
 
@@ -210,7 +240,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 520px;
+    height: 580px;
     position: relative;
     overflow: hidden;
   }
@@ -228,7 +258,13 @@
     color: var(--border);
     line-height: 1;
   }
-  .empty-state p { font-size: 0.65rem; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; margin-top: 10px; }
+  .empty-state p {
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-top: 10px;
+  }
 
   .status-bar {
     background: #0d0d15;
@@ -236,7 +272,7 @@
     border-top: none;
     padding: 8px 16px;
     display: flex;
-    gap: 24px;
+    gap: 22px;
     font-size: 0.6rem;
     color: var(--muted);
     letter-spacing: 0.1em;
@@ -248,7 +284,7 @@
     position: absolute;
     inset: 0;
     background: rgba(10,10,15,0.85);
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     flex-direction: column;
@@ -257,10 +293,12 @@
     letter-spacing: 0.2em;
     color: var(--accent2);
     text-transform: uppercase;
-    display: none;
+    z-index: 5;
   }
+
   .spinner {
-    width: 28px; height: 28px;
+    width: 28px;
+    height: 28px;
     border: 2px solid var(--border);
     border-top-color: var(--accent);
     border-radius: 50%;
@@ -269,7 +307,10 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .erase-active #canvasWrap { cursor: crosshair; }
-  .erase-active #canvasWrap canvas { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .erase-active #canvasWrap canvas {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
 
   .checker-bg {
     background-image:
@@ -281,38 +322,93 @@
     background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
     background-color: #111118;
   }
+
+  .mini-note { font-size: 0.62rem; color: var(--muted); line-height: 1.7; }
+
+  .transform-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .transform-grid.full { grid-template-columns: 1fr; }
+
+  .transform-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.06em;
+    padding: 10px 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .transform-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+  .transform-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(255,60,95,0.1); }
+
+  @media (max-width: 860px) {
+    .workspace { grid-template-columns: 1fr; }
+    .canvas-wrap { height: 420px; }
+  }
 </style>
 </head>
 <body>
 
 <header>
   <h1>MOSAIC</h1>
-  <span class="tag">v2.0</span>
+  <span class="tag">v2.2</span>
 </header>
 
 <div class="workspace">
   <aside class="side">
-
     <div class="card">
       <div class="card-label">이미지 업로드</div>
       <div class="drop-zone" id="dropZone">
         <span class="icon">⬛</span>
         <p><strong>클릭</strong>하거나<br>드래그하여 이미지를<br>여기에 놓으세요</p>
       </div>
-      <input type="file" id="fileInput" accept="image/*">
+      <input type="file" id="fileInput" accept="image/*" />
+    </div>
+
+    <div class="card">
+      <div class="card-label">이미지 변환</div>
+
+      <div class="slider-row">
+        <div class="slider-header">
+          <span>자유 회전</span>
+          <span class="slider-val" id="rotationVal">0°</span>
+        </div>
+        <input type="range" id="rotationSlider" min="-180" max="180" value="0" step="1" />
+      </div>
+
+      <div class="transform-grid">
+        <button class="transform-btn" id="rotateLeftBtn">↺ -90°</button>
+        <button class="transform-btn" id="rotateRightBtn">↻ +90°</button>
+      </div>
+
+      <div class="transform-grid">
+        <button class="transform-btn" id="flipHBtn">⇋ 좌우 반전</button>
+        <button class="transform-btn" id="flipVBtn">⇅ 상하 반전</button>
+      </div>
+
+      <div class="transform-grid full">
+        <button class="transform-btn" id="resetTransformBtn">⟲ 변환 초기화</button>
+      </div>
+
+      <div class="mini-note">회전·반전·픽셀 설정을 바꿔도 지우기 마스크는 세션 동안 유지됩니다.</div>
     </div>
 
     <div class="card">
       <div class="card-label">픽셀 설정</div>
-
       <div style="margin-bottom:14px;">
         <div class="card-label" style="margin-bottom:10px;">픽셀 크기</div>
-        <div class="bit-grid" style="grid-template-columns:repeat(5,1fr);" id="pixelBtns">
-          <button class="bit-btn" data-px="2"><span class="bit-name">2</span>px</button>
-          <button class="bit-btn" data-px="4"><span class="bit-name">4</span>px</button>
-          <button class="bit-btn active" data-px="8"><span class="bit-name">8</span>px</button>
-          <button class="bit-btn" data-px="16"><span class="bit-name">16</span>px</button>
-          <button class="bit-btn" data-px="32"><span class="bit-name">32</span>px</button>
+        <div class="option-grid" id="pixelBtns" style="grid-template-columns:repeat(5,1fr);">
+          <button class="option-btn" data-px="2"><strong>2</strong>px</button>
+          <button class="option-btn" data-px="4"><strong>4</strong>px</button>
+          <button class="option-btn active" data-px="8"><strong>8</strong>px</button>
+          <button class="option-btn" data-px="16"><strong>16</strong>px</button>
+          <button class="option-btn" data-px="32"><strong>32</strong>px</button>
         </div>
       </div>
 
@@ -321,69 +417,47 @@
           <span>채도</span>
           <span class="slider-val" id="satVal">100%</span>
         </div>
-        <input type="range" id="saturation" min="0" max="200" value="100" step="5">
+        <input type="range" id="saturation" min="0" max="200" value="100" step="5" />
       </div>
     </div>
 
     <div class="card">
       <div class="card-label">색상 비트 깊이</div>
-
-      <!-- 비트 프리셋 -->
-      <div class="bit-grid">
-        <button class="bit-btn" data-colors="2">
-          <span class="bit-name">1-bit</span>
-          2색
-        </button>
-        <button class="bit-btn" data-colors="4">
-          <span class="bit-name">2-bit</span>
-          4색
-        </button>
-        <button class="bit-btn" data-colors="8">
-          <span class="bit-name">3-bit</span>
-          8색
-        </button>
-        <button class="bit-btn" data-colors="16">
-          <span class="bit-name">4-bit</span>
-          16색
-        </button>
-        <button class="bit-btn" data-colors="256">
-          <span class="bit-name">8-bit</span>
-          256색
-        </button>
-        <button class="bit-btn active" data-colors="65536">
-          <span class="bit-name">16-bit</span>
-          원본
-        </button>
+      <div class="option-grid" id="colorPresetBtns" style="grid-template-columns:repeat(3,1fr);">
+        <button class="option-btn" data-colors="2"><strong>1-bit</strong>2색</button>
+        <button class="option-btn" data-colors="4"><strong>2-bit</strong>4색</button>
+        <button class="option-btn" data-colors="8"><strong>3-bit</strong>8색</button>
+        <button class="option-btn" data-colors="16"><strong>4-bit</strong>16색</button>
+        <button class="option-btn" data-colors="256"><strong>8-bit</strong>256색</button>
+        <button class="option-btn active" data-colors="65536"><strong>원본</strong>무제한</button>
       </div>
 
       <div class="divider"></div>
 
-      <!-- 커스텀 슬라이더 -->
       <div class="slider-row">
         <div class="slider-header">
           <span>커스텀 색상 수</span>
-          <span class="slider-val" id="colorVal">—</span>
+          <span class="slider-val" id="colorVal">256</span>
         </div>
-        <input type="range" id="colorCount" min="2" max="256" value="256" step="1">
+        <input type="range" id="colorCount" min="2" max="256" value="256" step="1" />
       </div>
     </div>
 
     <div class="card" id="eraseCard">
       <div class="card-label">색상 지우기</div>
-
       <div style="font-size:0.65rem;color:var(--muted);line-height:1.7;margin-bottom:14px;">
-        캔버스를 <strong style="color:var(--accent2)">클릭</strong>하면 해당 색상과<br>연결된 영역을 삭제합니다.
+        <strong style="color:var(--accent2)">지우기 모드 ON</strong> 후 캔버스를 클릭하면<br />
+        해당 색상을 투명 처리합니다.
       </div>
 
-      <!-- 모드 토글 -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;">
         <button class="erase-mode-btn active" id="modeFlood" data-mode="flood"
-          style="background:none;border:1px solid var(--accent);color:var(--accent);font-family:'Space Mono',monospace;font-size:0.6rem;letter-spacing:0.08em;padding:8px 4px;cursor:pointer;text-align:center;line-height:1.5;transition:all .15s;">
-          <span style="display:block;font-size:0.7rem;font-weight:700;">FLOOD</span>연결된 영역만
+          style="background:rgba(255,60,95,0.1);border:1px solid var(--accent);color:var(--accent);font-family:'Space Mono',monospace;font-size:0.6rem;letter-spacing:0.08em;padding:8px 4px;cursor:pointer;text-align:center;line-height:1.5;transition:all .15s;">
+          <span style="display:block;font-size:0.7rem;font-weight:700;color:var(--accent);">FLOOD</span>연결된 영역만
         </button>
         <button class="erase-mode-btn" id="modeGlobal" data-mode="global"
           style="background:none;border:1px solid var(--border);color:var(--muted);font-family:'Space Mono',monospace;font-size:0.6rem;letter-spacing:0.08em;padding:8px 4px;cursor:pointer;text-align:center;line-height:1.5;transition:all .15s;">
-          <span style="display:block;font-size:0.7rem;font-weight:700;">GLOBAL</span>이미지 전체
+          <span style="display:block;font-size:0.7rem;font-weight:700;color:var(--text);">GLOBAL</span>이미지 전체
         </button>
       </div>
 
@@ -392,7 +466,7 @@
           <span>허용 오차</span>
           <span class="slider-val" id="toleranceVal">30</span>
         </div>
-        <input type="range" id="toleranceSlider" min="0" max="150" value="30" step="1">
+        <input type="range" id="toleranceSlider" min="0" max="150" value="30" step="1" />
       </div>
 
       <div class="divider"></div>
@@ -400,12 +474,12 @@
       <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
         <div id="eraseColorPreview" style="width:28px;height:28px;border:1px solid var(--border);background:#888;flex-shrink:0;"></div>
         <div style="font-size:0.6rem;color:var(--muted);line-height:1.5;">
-          마지막 클릭 색상<br>
+          마지막 클릭 색상<br />
           <span id="eraseColorHex" style="color:var(--accent2);letter-spacing:0.1em;">—</span>
         </div>
       </div>
 
-      <button class="btn btn-ghost" id="undoEraseBtn" disabled style="margin-bottom:6px;">↩ 되돌리기</button>
+      <button class="btn btn-ghost" id="undoBtn" disabled style="margin-bottom:6px;">↩ 되돌리기 Ctrl+Z</button>
       <button class="btn" id="eraseToggleBtn"
         style="background:rgba(255,60,95,0.15);color:var(--accent);border:1px solid var(--accent);font-family:'Space Mono',monospace;font-size:0.72rem;letter-spacing:0.15em;text-transform:uppercase;font-weight:700;padding:12px;cursor:pointer;">
         ✕ 지우기 모드 ON
@@ -416,14 +490,13 @@
       <div class="card-label">내보내기</div>
       <button class="btn btn-ghost" id="downloadBtn" disabled>PNG 다운로드</button>
     </div>
-
   </aside>
 
   <div class="canvas-area">
     <div class="canvas-wrap checker-bg" id="canvasWrap">
       <div class="empty-state" id="emptyState">
         <div class="big">MOSAIC</div>
-        <p>이미지를 업로드하면<br>픽셀화가 시작됩니다</p>
+        <p>이미지를 업로드하면<br />픽셀화가 시작됩니다</p>
       </div>
       <canvas id="outputCanvas" style="display:none;"></canvas>
       <div class="processing-overlay" id="processingOverlay">
@@ -433,398 +506,836 @@
     </div>
     <div class="status-bar">
       <span>원본<span class="s-val" id="sOrigSize">—</span></span>
+      <span>변환 후<span class="s-val" id="sTransformedSize">—</span></span>
       <span>픽셀 크기<span class="s-val" id="sBlock">—</span></span>
       <span>색상 수<span class="s-val" id="sColors">—</span></span>
       <span>실제 색상<span class="s-val" id="sActualColors">—</span></span>
+      <span>변환 상태<span class="s-val" id="sTransform">기본</span></span>
+      <span>히스토리<span class="s-val" id="sHistory">0</span></span>
     </div>
   </div>
 </div>
 
 <script>
-  const dropZone   = document.getElementById('dropZone');
-  const fileInput  = document.getElementById('fileInput');
-  const colorSlider = document.getElementById('colorCount');
-  const satSlider  = document.getElementById('saturation');
-  const colorVal   = document.getElementById('colorVal');
-  const satVal     = document.getElementById('satVal');
-  let currentPixelSize = 8;
-  const downloadBtn = document.getElementById('downloadBtn');
-  const outputCanvas = document.getElementById('outputCanvas');
-  const emptyState = document.getElementById('emptyState');
-  const processingOverlay = document.getElementById('processingOverlay');
-  const ctx = outputCanvas.getContext('2d');
+(() => {
+  'use strict';
+
+  const SESSION_KEY = 'mosaic_v2_2_session';
+  const HISTORY_LIMIT = 30;
+
+  const $ = id => document.getElementById(id);
+
+  const dropZone = $('dropZone');
+  const fileInput = $('fileInput');
+  const colorSlider = $('colorCount');
+  const satSlider = $('saturation');
+  const rotationSlider = $('rotationSlider');
+  const colorVal = $('colorVal');
+  const satVal = $('satVal');
+  const rotationVal = $('rotationVal');
+  const downloadBtn = $('downloadBtn');
+  const outputCanvas = $('outputCanvas');
+  const emptyState = $('emptyState');
+  const processingOverlay = $('processingOverlay');
+  const canvasWrap = $('canvasWrap');
+  const ctx = outputCanvas.getContext('2d', { willReadFrequently: true });
+
+  const sOrigSize = $('sOrigSize');
+  const sTransformedSize = $('sTransformedSize');
+  const sBlock = $('sBlock');
+  const sColors = $('sColors');
+  const sActualColors = $('sActualColors');
+  const sTransform = $('sTransform');
+  const sHistory = $('sHistory');
+
+  const rotateLeftBtn = $('rotateLeftBtn');
+  const rotateRightBtn = $('rotateRightBtn');
+  const flipHBtn = $('flipHBtn');
+  const flipVBtn = $('flipVBtn');
+  const resetTransformBtn = $('resetTransformBtn');
+
+  const eraseToggleBtn = $('eraseToggleBtn');
+  const undoBtn = $('undoBtn');
+  const toleranceSlider = $('toleranceSlider');
+  const toleranceVal = $('toleranceVal');
+  const eraseColorPreview = $('eraseColorPreview');
+  const eraseColorHex = $('eraseColorHex');
+
+  const state = {
+    imageSrc: null,
+    pixelSize: 8,
+    saturation: 100,
+    targetColors: 65536,
+    rotationDeg: 0,
+    flipX: false,
+    flipY: false,
+    eraseMode: false,
+    eraseType: 'flood',
+    tolerance: 30
+  };
 
   let originalImage = null;
-  let targetColors = 65536; // default: 16-bit (no quantization)
   let renderTimer = null;
+  let maskCanvas = null;
+  let maskCtx = null;
+  let historyStack = [];
+  let suppressHistory = false;
+  let lastRenderedSourceSize = { width: 0, height: 0 };
 
-  // ── 파일 로드 ──────────────────────────────────────
+  // ─────────────────────────────────────────────
+  // Utility
+  // ─────────────────────────────────────────────
+  function clamp(v) { return Math.max(0, Math.min(255, Math.round(v))); }
+
+  function normalizeAngle(deg) {
+    let v = ((Number(deg) + 180) % 360 + 360) % 360 - 180;
+    if (v === -180) v = 180;
+    return Math.round(v);
+  }
+
+  function sleepFrame() {
+    return new Promise(resolve => requestAnimationFrame(resolve));
+  }
+
+  function loadImage(src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = src;
+    });
+  }
+
+  function setProcessing(isOn) {
+    processingOverlay.style.display = isOn ? 'flex' : 'none';
+  }
+
+  function setObject(target, source) {
+    for (const [key, value] of Object.entries(source)) {
+      if (key in target) target[key] = value;
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // UI sync
+  // ─────────────────────────────────────────────
+  function syncUI() {
+    satSlider.value = state.saturation;
+    satVal.textContent = `${state.saturation}%`;
+
+    rotationSlider.value = state.rotationDeg;
+    rotationVal.textContent = `${state.rotationDeg}°`;
+
+    colorSlider.value = Math.min(state.targetColors, 256);
+    colorVal.textContent = state.targetColors >= 65536 ? '제한 없음' : String(state.targetColors);
+
+    toleranceSlider.value = state.tolerance;
+    toleranceVal.textContent = String(state.tolerance);
+
+    document.querySelectorAll('#pixelBtns .option-btn').forEach(btn => {
+      btn.classList.toggle('active', parseInt(btn.dataset.px, 10) === state.pixelSize);
+    });
+
+    document.querySelectorAll('#colorPresetBtns .option-btn').forEach(btn => {
+      btn.classList.toggle('active', parseInt(btn.dataset.colors, 10) === state.targetColors);
+    });
+
+    flipHBtn.classList.toggle('active', state.flipX);
+    flipVBtn.classList.toggle('active', state.flipY);
+
+    document.body.classList.toggle('erase-active', state.eraseMode);
+    eraseToggleBtn.textContent = state.eraseMode ? '✕ 지우기 모드 OFF' : '✕ 지우기 모드 ON';
+    eraseToggleBtn.style.background = state.eraseMode ? 'rgba(255,60,95,0.35)' : 'rgba(255,60,95,0.15)';
+
+    document.querySelectorAll('.erase-mode-btn').forEach(b => {
+      const isActive = b.dataset.mode === state.eraseType;
+      b.style.borderColor = isActive ? 'var(--accent)' : 'var(--border)';
+      b.style.color = isActive ? 'var(--accent)' : 'var(--muted)';
+      b.style.background = isActive ? 'rgba(255,60,95,0.1)' : 'none';
+      b.querySelector('span').style.color = isActive ? 'var(--accent)' : 'var(--text)';
+    });
+
+    updateTransformStatus();
+    updateHistoryUI();
+  }
+
+  function updateTransformStatus() {
+    const parts = [];
+    if (state.rotationDeg !== 0) parts.push(`R${state.rotationDeg}°`);
+    if (state.flipX) parts.push('H-FLIP');
+    if (state.flipY) parts.push('V-FLIP');
+    sTransform.textContent = parts.length ? parts.join(' / ') : '기본';
+  }
+
+  function updateHistoryUI() {
+    undoBtn.disabled = historyStack.length <= 1;
+    sHistory.textContent = String(Math.max(0, historyStack.length - 1));
+  }
+
+  // ─────────────────────────────────────────────
+  // Session + history
+  // ─────────────────────────────────────────────
+  function snapshot(label = '') {
+    return {
+      label,
+      imageSrc: state.imageSrc,
+      settings: {
+        pixelSize: state.pixelSize,
+        saturation: state.saturation,
+        targetColors: state.targetColors,
+        rotationDeg: state.rotationDeg,
+        flipX: state.flipX,
+        flipY: state.flipY,
+        eraseType: state.eraseType,
+        tolerance: state.tolerance
+      },
+      mask: maskCanvas ? maskCanvas.toDataURL('image/png') : null,
+      maskWidth: maskCanvas ? maskCanvas.width : 0,
+      maskHeight: maskCanvas ? maskCanvas.height : 0
+    };
+  }
+
+  function pushHistory(label = '') {
+    if (suppressHistory || !state.imageSrc) return;
+    historyStack.push(snapshot(label));
+    if (historyStack.length > HISTORY_LIMIT) historyStack.shift();
+    updateHistoryUI();
+    saveSession();
+  }
+
+  async function undo() {
+    if (historyStack.length <= 1) return;
+    historyStack.pop();
+    const prev = historyStack[historyStack.length - 1];
+    suppressHistory = true;
+    await restoreSnapshot(prev, { push: false, save: true });
+    suppressHistory = false;
+    updateHistoryUI();
+  }
+
+  function saveSession() {
+    if (!state.imageSrc) return;
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(snapshot('session')));
+    } catch (err) {
+      // 대형 이미지에서는 브라우저 storage quota를 초과할 수 있다. 앱 자체 동작은 계속 유지한다.
+      console.warn('Session save skipped:', err);
+    }
+  }
+
+  async function tryRestoreSession() {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return false;
+
+    try {
+      const saved = JSON.parse(raw);
+      if (!saved || !saved.imageSrc) return false;
+
+      suppressHistory = true;
+      await restoreSnapshot(saved, { push: false, save: false });
+      suppressHistory = false;
+
+      historyStack = [snapshot('session-restored')];
+      updateHistoryUI();
+      return true;
+    } catch (err) {
+      console.warn('Session restore failed:', err);
+      sessionStorage.removeItem(SESSION_KEY);
+      return false;
+    }
+  }
+
+  async function restoreSnapshot(snap, options = { push: false, save: false }) {
+    if (!snap || !snap.imageSrc) return;
+
+    state.imageSrc = snap.imageSrc;
+    setObject(state, snap.settings || {});
+    state.rotationDeg = normalizeAngle(state.rotationDeg || 0);
+    state.eraseMode = false;
+
+    originalImage = await loadImage(state.imageSrc);
+    sOrigSize.textContent = `${originalImage.width}×${originalImage.height}`;
+
+    await restoreMaskFromSnapshot(snap);
+    syncUI();
+    await renderPixelated({ preserveMask: true, commit: false });
+
+    if (options.push) pushHistory('restore');
+    if (options.save) saveSession();
+  }
+
+  async function restoreMaskFromSnapshot(snap) {
+    maskCanvas = null;
+    maskCtx = null;
+
+    if (!snap.mask || !snap.maskWidth || !snap.maskHeight) return;
+
+    const img = await loadImage(snap.mask);
+    maskCanvas = document.createElement('canvas');
+    maskCanvas.width = snap.maskWidth;
+    maskCanvas.height = snap.maskHeight;
+    maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
+    maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+    maskCtx.drawImage(img, 0, 0);
+  }
+
+  // ─────────────────────────────────────────────
+  // Mask
+  // ─────────────────────────────────────────────
+  function createFullMask(w, h) {
+    maskCanvas = document.createElement('canvas');
+    maskCanvas.width = w;
+    maskCanvas.height = h;
+    maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
+    maskCtx.clearRect(0, 0, w, h);
+    maskCtx.fillStyle = 'rgba(255,255,255,1)';
+    maskCtx.fillRect(0, 0, w, h);
+  }
+
+  function ensureMask(w, h, preserveMask = true) {
+    if (!preserveMask || !maskCanvas) {
+      createFullMask(w, h);
+      return;
+    }
+
+    if (maskCanvas.width === w && maskCanvas.height === h) return;
+
+    const old = maskCanvas;
+    maskCanvas = document.createElement('canvas');
+    maskCanvas.width = w;
+    maskCanvas.height = h;
+    maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
+
+    // 기존 삭제 영역을 새 출력 크기에 맞춰 상대적으로 보존한다.
+    maskCtx.clearRect(0, 0, w, h);
+    maskCtx.imageSmoothingEnabled = false;
+    maskCtx.drawImage(old, 0, 0, old.width, old.height, 0, 0, w, h);
+  }
+
+  function applyMaskToOutput() {
+    if (!maskCanvas) return;
+    const w = outputCanvas.width;
+    const h = outputCanvas.height;
+    if (!w || !h) return;
+
+    const img = ctx.getImageData(0, 0, w, h);
+    const mask = maskCtx.getImageData(0, 0, w, h);
+
+    for (let i = 0; i < img.data.length; i += 4) {
+      img.data[i + 3] = Math.round(img.data[i + 3] * (mask.data[i + 3] / 255));
+    }
+
+    ctx.putImageData(img, 0, 0);
+  }
+
+  // ─────────────────────────────────────────────
+  // File load
+  // ─────────────────────────────────────────────
   dropZone.addEventListener('click', () => fileInput.click());
   dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
   dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
   dropZone.addEventListener('drop', e => {
-    e.preventDefault(); dropZone.classList.remove('drag-over');
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
     const f = e.dataTransfer.files[0];
     if (f && f.type.startsWith('image/')) loadFile(f);
   });
-  fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+  fileInput.addEventListener('change', e => {
+    if (e.target.files[0]) loadFile(e.target.files[0]);
+  });
 
   function loadFile(file) {
     const reader = new FileReader();
-    reader.onload = ev => {
-      const img = new Image();
-      img.onload = () => {
-        originalImage = img;
-        document.getElementById('sOrigSize').textContent = `${img.width}×${img.height}`;
-        scheduleRender();
-      };
-      img.src = ev.target.result;
+    reader.onload = async ev => {
+      state.imageSrc = ev.target.result;
+      originalImage = await loadImage(state.imageSrc);
+
+      state.pixelSize = 8;
+      state.saturation = 100;
+      state.targetColors = 65536;
+      state.rotationDeg = 0;
+      state.flipX = false;
+      state.flipY = false;
+      state.eraseMode = false;
+      state.eraseType = 'flood';
+      state.tolerance = 30;
+
+      maskCanvas = null;
+      maskCtx = null;
+      historyStack = [];
+
+      sOrigSize.textContent = `${originalImage.width}×${originalImage.height}`;
+      syncUI();
+      await renderPixelated({ preserveMask: false, commit: false });
+      pushHistory('load');
+      saveSession();
     };
     reader.readAsDataURL(file);
   }
 
-  // ── 슬라이더 이벤트 ────────────────────────────────
-  document.querySelectorAll('#pixelBtns .bit-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#pixelBtns .bit-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentPixelSize = parseInt(btn.dataset.px);
-      if (originalImage) scheduleRender();
-    });
-  });
-  satSlider.addEventListener('input', () => {
-    satVal.textContent = satSlider.value + '%';
-    if (originalImage) scheduleRender();
-  });
-  colorSlider.addEventListener('input', () => {
-    const v = parseInt(colorSlider.value);
-    colorVal.textContent = v;
-    targetColors = v;
-    // 커스텀 선택시 비트 버튼 해제
-    document.querySelectorAll('.bit-btn').forEach(b => b.classList.remove('active'));
-    if (originalImage) scheduleRender();
-  });
-
-  // ── 비트 프리셋 버튼 ───────────────────────────────
-  document.querySelectorAll('.bit-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.bit-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      targetColors = parseInt(btn.dataset.colors);
-      // 슬라이더 sync (65536은 max 밖이니 256으로 표시만)
-      const sliderVal = Math.min(targetColors, 256);
-      colorSlider.value = sliderVal;
-      colorVal.textContent = targetColors >= 65536 ? '제한 없음' : targetColors;
-      if (originalImage) scheduleRender();
-    });
-  });
-
-  // ── 디바운스 렌더 ──────────────────────────────────
-  function scheduleRender() {
+  // ─────────────────────────────────────────────
+  // Controls
+  // ─────────────────────────────────────────────
+  function scheduleRender(options = { preserveMask: true, commit: true }) {
     clearTimeout(renderTimer);
-    renderTimer = setTimeout(() => renderPixelated(), 80);
+    renderTimer = setTimeout(() => {
+      renderPixelated(options);
+    }, 80);
   }
 
-  // ── 다운로드 ───────────────────────────────────────
+  document.querySelectorAll('#pixelBtns .option-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.pixelSize = parseInt(btn.dataset.px, 10);
+      syncUI();
+      if (originalImage) scheduleRender({ preserveMask: true, commit: true });
+    });
+  });
+
+  satSlider.addEventListener('input', () => {
+    state.saturation = parseInt(satSlider.value, 10);
+    syncUI();
+    if (originalImage) scheduleRender({ preserveMask: true, commit: true });
+  });
+
+  rotationSlider.addEventListener('input', () => {
+    state.rotationDeg = normalizeAngle(rotationSlider.value);
+    syncUI();
+    if (originalImage) scheduleRender({ preserveMask: true, commit: true });
+  });
+
+  rotateLeftBtn.addEventListener('click', () => {
+    if (!originalImage) return;
+    state.rotationDeg = normalizeAngle(state.rotationDeg - 90);
+    syncUI();
+    scheduleRender({ preserveMask: true, commit: true });
+  });
+
+  rotateRightBtn.addEventListener('click', () => {
+    if (!originalImage) return;
+    state.rotationDeg = normalizeAngle(state.rotationDeg + 90);
+    syncUI();
+    scheduleRender({ preserveMask: true, commit: true });
+  });
+
+  flipHBtn.addEventListener('click', () => {
+    if (!originalImage) return;
+    state.flipX = !state.flipX;
+    syncUI();
+    scheduleRender({ preserveMask: true, commit: true });
+  });
+
+  flipVBtn.addEventListener('click', () => {
+    if (!originalImage) return;
+    state.flipY = !state.flipY;
+    syncUI();
+    scheduleRender({ preserveMask: true, commit: true });
+  });
+
+  resetTransformBtn.addEventListener('click', () => {
+    if (!originalImage) return;
+    state.rotationDeg = 0;
+    state.flipX = false;
+    state.flipY = false;
+    syncUI();
+    scheduleRender({ preserveMask: true, commit: true });
+  });
+
+  document.querySelectorAll('#colorPresetBtns .option-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.targetColors = parseInt(btn.dataset.colors, 10);
+      syncUI();
+      if (originalImage) scheduleRender({ preserveMask: true, commit: true });
+    });
+  });
+
+  colorSlider.addEventListener('input', () => {
+    state.targetColors = parseInt(colorSlider.value, 10);
+    syncUI();
+    document.querySelectorAll('#colorPresetBtns .option-btn').forEach(b => b.classList.remove('active'));
+    if (originalImage) scheduleRender({ preserveMask: true, commit: true });
+  });
+
+  toleranceSlider.addEventListener('input', () => {
+    state.tolerance = parseInt(toleranceSlider.value, 10);
+    syncUI();
+    saveSession();
+  });
+
+  document.querySelectorAll('.erase-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.eraseType = btn.dataset.mode;
+      syncUI();
+      saveSession();
+    });
+  });
+
+  eraseToggleBtn.addEventListener('click', () => {
+    state.eraseMode = !state.eraseMode;
+    syncUI();
+    saveSession();
+  });
+
+  undoBtn.addEventListener('click', undo);
+
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      undo();
+    }
+  });
+
   downloadBtn.addEventListener('click', () => {
+    if (!outputCanvas.width || !outputCanvas.height) return;
     const link = document.createElement('a');
     link.download = 'mosaic.png';
     link.href = outputCanvas.toDataURL('image/png');
     link.click();
   });
 
-  // ══════════════════════════════════════════════════
-  //  CORE: 픽셀화 + Median Cut 양자화
-  // ══════════════════════════════════════════════════
-  function renderPixelated() {
+  // ─────────────────────────────────────────────
+  // Rendering
+  // ─────────────────────────────────────────────
+  async function renderPixelated(options = { preserveMask: true, commit: false }) {
     if (!originalImage) return;
 
-    const blockSize = currentPixelSize;
-    const sat = parseInt(satSlider.value) / 100;
-    const W = originalImage.width;
-    const H = originalImage.height;
-    const sw = Math.ceil(W / blockSize);
-    const sh = Math.ceil(H / blockSize);
+    const sourceCanvas = buildTransformedSourceCanvas();
+    const blockSize = state.pixelSize;
+    const sat = state.saturation / 100;
+    const W = sourceCanvas.width;
+    const H = sourceCanvas.height;
 
-    // 1) 작은 캔버스에 그리기 (픽셀화)
+    lastRenderedSourceSize = { width: W, height: H };
+
+    const sw = Math.max(1, Math.ceil(W / blockSize));
+    const sh = Math.max(1, Math.ceil(H / blockSize));
+
     const small = document.createElement('canvas');
-    small.width = sw; small.height = sh;
-    const sc = small.getContext('2d');
-    sc.drawImage(originalImage, 0, 0, sw, sh);
+    small.width = sw;
+    small.height = sh;
+    const sc = small.getContext('2d', { willReadFrequently: true });
+    sc.imageSmoothingEnabled = true;
+    sc.drawImage(sourceCanvas, 0, 0, sw, sh);
+
     const imageData = sc.getImageData(0, 0, sw, sh);
     const data = imageData.data;
 
-    // 2) 채도 적용 + 반투명만 불투명화 (완전 투명은 유지)
     for (let i = 0; i < data.length; i += 4) {
-      if (data[i+3] === 0) continue; // 완전 투명 픽셀은 건드리지 않음
-      const r = data[i], g = data[i+1], b = data[i+2];
-      const gray = 0.299*r + 0.587*g + 0.114*b;
-      data[i]   = clamp(gray + sat * (r - gray));
-      data[i+1] = clamp(gray + sat * (g - gray));
-      data[i+2] = clamp(gray + sat * (b - gray));
-      data[i+3] = 255; // 반투명 → 불투명
+      if (data[i + 3] === 0) continue;
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+      data[i] = clamp(gray + sat * (r - gray));
+      data[i + 1] = clamp(gray + sat * (g - gray));
+      data[i + 2] = clamp(gray + sat * (b - gray));
+      data[i + 3] = 255;
     }
 
-    // 3) 색상 양자화 (Median Cut)
-    const numColors = targetColors;
-    let palette = null;
+    let shownColorCount = '제한 없음';
 
-    if (numColors < 65536) {
-      processingOverlay.style.display = 'flex';
-      // setTimeout으로 UI 업데이트 후 무거운 작업 실행
-      setTimeout(() => {
-        palette = medianCut(data, Math.min(numColors, 256));
-        applyPalette(data, palette);
-        sc.putImageData(imageData, 0, 0);
-        drawOutput(small, sw, sh, W, H, palette ? palette.length : '제한 없음');
-        processingOverlay.style.display = 'none';
-      }, 20);
-    } else {
-      sc.putImageData(imageData, 0, 0);
-      drawOutput(small, sw, sh, W, H, '제한 없음');
+    if (state.targetColors < 65536) {
+      setProcessing(true);
+      await sleepFrame();
+      const palette = medianCut(data, Math.min(state.targetColors, 256));
+      applyPalette(data, palette);
+      shownColorCount = palette.length;
+      setProcessing(false);
     }
-  }
 
-  function drawOutput(small, sw, sh, W, H, colorCount) {
-    // 출력 크기 = 픽셀화된 해상도 (sw×sh), 업스케일 없음
+    sc.putImageData(imageData, 0, 0);
+
     outputCanvas.width = sw;
     outputCanvas.height = sh;
+    ctx.clearRect(0, 0, sw, sh);
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(small, 0, 0, sw, sh, 0, 0, sw, sh);
 
-    // 미리보기: 컨테이너에 맞게 표시 크기 계산 (비율 유지, 픽셀 선명하게)
-    const wrap = document.getElementById('canvasWrap');
-    const maxW = wrap.clientWidth  - 32;
-    const maxH = wrap.clientHeight - 32;
-    const scale = Math.min(maxW / sw, maxH / sh);
-    outputCanvas.style.width  = Math.round(sw * scale) + 'px';
-    outputCanvas.style.height = Math.round(sh * scale) + 'px';
+    ensureMask(sw, sh, options.preserveMask);
+    applyMaskToOutput();
+    fitCanvasToWrap(sw, sh);
 
     emptyState.style.display = 'none';
     outputCanvas.style.display = 'block';
     downloadBtn.disabled = false;
 
-    document.getElementById('sBlock').textContent = `${currentPixelSize}×${currentPixelSize}`;
-    document.getElementById('sColors').textContent = colorCount;
+    sTransformedSize.textContent = `${W}×${H}`;
+    sBlock.textContent = `${state.pixelSize}×${state.pixelSize}`;
+    sColors.textContent = shownColorCount;
+    updateActualColorCount();
+    updateTransformStatus();
 
-    // 실제 사용 색상 수 세기
-    const id = ctx.getImageData(0, 0, sw, sh);
-    const colorSet = new Set();
-    for (let i = 0; i < id.data.length; i += 4) {
-      colorSet.add((id.data[i] << 16) | (id.data[i+1] << 8) | id.data[i+2]);
-    }
-    document.getElementById('sActualColors').textContent = colorSet.size.toLocaleString();
+    if (options.commit && !suppressHistory) pushHistory('render');
+    saveSession();
   }
 
-  // ── 팔레트 적용 ────────────────────────────────────
+  function fitCanvasToWrap(sw, sh) {
+    const maxW = Math.max(1, canvasWrap.clientWidth - 32);
+    const maxH = Math.max(1, canvasWrap.clientHeight - 32);
+    const scale = Math.min(maxW / sw, maxH / sh);
+    outputCanvas.style.width = `${Math.max(1, Math.round(sw * scale))}px`;
+    outputCanvas.style.height = `${Math.max(1, Math.round(sh * scale))}px`;
+  }
+
+  function buildTransformedSourceCanvas() {
+    const w = originalImage.width;
+    const h = originalImage.height;
+    const rad = state.rotationDeg * Math.PI / 180;
+    const cos = Math.abs(Math.cos(rad));
+    const sin = Math.abs(Math.sin(rad));
+    const outW = Math.max(1, Math.ceil(w * cos + h * sin));
+    const outH = Math.max(1, Math.ceil(w * sin + h * cos));
+
+    const c = document.createElement('canvas');
+    c.width = outW;
+    c.height = outH;
+    const cctx = c.getContext('2d', { willReadFrequently: true });
+
+    cctx.clearRect(0, 0, outW, outH);
+    cctx.translate(outW / 2, outH / 2);
+    cctx.rotate(rad);
+    cctx.scale(state.flipX ? -1 : 1, state.flipY ? -1 : 1);
+    cctx.drawImage(originalImage, -w / 2, -h / 2);
+
+    return c;
+  }
+
+  function updateActualColorCount() {
+    if (!outputCanvas.width || !outputCanvas.height) {
+      sActualColors.textContent = '—';
+      return;
+    }
+
+    const id = ctx.getImageData(0, 0, outputCanvas.width, outputCanvas.height);
+    const colorSet = new Set();
+
+    for (let i = 0; i < id.data.length; i += 4) {
+      if (id.data[i + 3] === 0) continue;
+      colorSet.add((id.data[i] << 16) | (id.data[i + 1] << 8) | id.data[i + 2]);
+    }
+
+    sActualColors.textContent = colorSet.size.toLocaleString();
+  }
+
+  // ─────────────────────────────────────────────
+  // Palette
+  // ─────────────────────────────────────────────
   function applyPalette(data, palette) {
     for (let i = 0; i < data.length; i += 4) {
-      const [nr, ng, nb] = nearestColor(data[i], data[i+1], data[i+2], palette);
-      data[i] = nr; data[i+1] = ng; data[i+2] = nb;
+      if (data[i + 3] === 0) continue;
+      const [nr, ng, nb] = nearestColor(data[i], data[i + 1], data[i + 2], palette);
+      data[i] = nr;
+      data[i + 1] = ng;
+      data[i + 2] = nb;
     }
   }
 
   function nearestColor(r, g, b, palette) {
-    let best = palette[0], bestDist = Infinity;
+    let best = palette[0];
+    let bestDist = Infinity;
     for (const c of palette) {
-      const d = (r-c[0])**2 + (g-c[1])**2 + (b-c[2])**2;
-      if (d < bestDist) { bestDist = d; best = c; }
+      const d = (r - c[0]) ** 2 + (g - c[1]) ** 2 + (b - c[2]) ** 2;
+      if (d < bestDist) {
+        bestDist = d;
+        best = c;
+      }
     }
     return best;
   }
 
-  // ══════════════════════════════════════════════════
-  //  Median Cut Color Quantization
-  // ══════════════════════════════════════════════════
   function medianCut(data, maxColors) {
-    // 픽셀 배열 수집 (샘플링: 너무 많으면 느려서 최대 8000픽셀)
     const pixels = [];
-    const step = Math.max(1, Math.floor(data.length / 4 / 8000));
-    for (let i = 0; i < data.length; i += 4 * step) {
-      pixels.push([data[i], data[i+1], data[i+2]]);
+    const totalPixels = data.length / 4;
+    const step = Math.max(1, Math.floor(totalPixels / 8000));
+
+    for (let p = 0; p < totalPixels; p += step) {
+      const i = p * 4;
+      if (data[i + 3] === 0) continue;
+      pixels.push([data[i], data[i + 1], data[i + 2]]);
     }
 
-    // 재귀 분할
+    if (pixels.length === 0) return [[0, 0, 0]];
+
     const buckets = [pixels];
+
     while (buckets.length < maxColors) {
-      // 범위가 가장 큰 버킷 찾기
-      let maxRange = -1, splitIdx = -1;
+      let maxRange = -1;
+      let splitIdx = -1;
+
       for (let i = 0; i < buckets.length; i++) {
+        if (buckets[i].length <= 1) continue;
         const range = colorRange(buckets[i]);
-        if (range > maxRange) { maxRange = range; splitIdx = i; }
+        if (range > maxRange) {
+          maxRange = range;
+          splitIdx = i;
+        }
       }
-      if (maxRange === 0) break;
+
+      if (splitIdx === -1 || maxRange <= 0) break;
 
       const bucket = buckets.splice(splitIdx, 1)[0];
       const [b1, b2] = splitBucket(bucket);
-      buckets.push(b1, b2);
+      if (b1.length) buckets.push(b1);
+      if (b2.length) buckets.push(b2);
     }
 
-    // 각 버킷의 평균색 = 팔레트
     return buckets.map(bucket => {
-      let r=0, g=0, b=0;
-      for (const p of bucket) { r+=p[0]; g+=p[1]; b+=p[2]; }
-      const n = bucket.length;
-      return [Math.round(r/n), Math.round(g/n), Math.round(b/n)];
+      let r = 0, g = 0, b = 0;
+      for (const p of bucket) { r += p[0]; g += p[1]; b += p[2]; }
+      const n = bucket.length || 1;
+      return [Math.round(r / n), Math.round(g / n), Math.round(b / n)];
     });
   }
 
   function colorRange(bucket) {
-    let minR=255,maxR=0, minG=255,maxG=0, minB=255,maxB=0;
-    for (const [r,g,b] of bucket) {
-      if(r<minR)minR=r; if(r>maxR)maxR=r;
-      if(g<minG)minG=g; if(g>maxG)maxG=g;
-      if(b<minB)minB=b; if(b>maxB)maxB=b;
+    let minR = 255, maxR = 0;
+    let minG = 255, maxG = 0;
+    let minB = 255, maxB = 0;
+
+    for (const [r, g, b] of bucket) {
+      if (r < minR) minR = r;
+      if (r > maxR) maxR = r;
+      if (g < minG) minG = g;
+      if (g > maxG) maxG = g;
+      if (b < minB) minB = b;
+      if (b > maxB) maxB = b;
     }
-    return Math.max(maxR-minR, maxG-minG, maxB-minB);
+
+    return Math.max(maxR - minR, maxG - minG, maxB - minB);
   }
 
   function splitBucket(bucket) {
-    // 범위가 가장 큰 채널로 정렬해서 중앙 분할
-    let minR=255,maxR=0, minG=255,maxG=0, minB=255,maxB=0;
-    for (const [r,g,b] of bucket) {
-      if(r<minR)minR=r; if(r>maxR)maxR=r;
-      if(g<minG)minG=g; if(g>maxG)maxG=g;
-      if(b<minB)minB=b; if(b>maxB)maxB=b;
-    }
-    const rRange=maxR-minR, gRange=maxG-minG, bRange=maxB-minB;
-    const ch = rRange>=gRange && rRange>=bRange ? 0 : gRange>=bRange ? 1 : 2;
+    let minR = 255, maxR = 0;
+    let minG = 255, maxG = 0;
+    let minB = 255, maxB = 0;
 
-    bucket.sort((a,b) => a[ch]-b[ch]);
+    for (const [r, g, b] of bucket) {
+      if (r < minR) minR = r;
+      if (r > maxR) maxR = r;
+      if (g < minG) minG = g;
+      if (g > maxG) maxG = g;
+      if (b < minB) minB = b;
+      if (b > maxB) maxB = b;
+    }
+
+    const rRange = maxR - minR;
+    const gRange = maxG - minG;
+    const bRange = maxB - minB;
+    const ch = rRange >= gRange && rRange >= bRange ? 0 : (gRange >= bRange ? 1 : 2);
+
+    bucket.sort((a, b) => a[ch] - b[ch]);
     const mid = Math.floor(bucket.length / 2);
     return [bucket.slice(0, mid), bucket.slice(mid)];
   }
 
-  function clamp(v) { return Math.max(0, Math.min(255, Math.round(v))); }
-
-  // ══════════════════════════════════════════════════
-  //  색상 지우기 (Flood Fill / Global)
-  // ══════════════════════════════════════════════════
-  let eraseMode = false;
-  let eraseType = 'flood'; // 'flood' | 'global'
-  let eraseHistory = []; // ImageData 스냅샷 스택
-
-  const eraseToggleBtn = document.getElementById('eraseToggleBtn');
-  const undoEraseBtn   = document.getElementById('undoEraseBtn');
-  const toleranceSlider = document.getElementById('toleranceSlider');
-  const toleranceVal   = document.getElementById('toleranceVal');
-  const eraseColorPreview = document.getElementById('eraseColorPreview');
-  const eraseColorHex  = document.getElementById('eraseColorHex');
-
-  toleranceSlider.addEventListener('input', () => {
-    toleranceVal.textContent = toleranceSlider.value;
-  });
-
-  // 모드 버튼 전환
-  document.querySelectorAll('.erase-mode-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      eraseType = btn.dataset.mode;
-      document.querySelectorAll('.erase-mode-btn').forEach(b => {
-        const isActive = b.dataset.mode === eraseType;
-        b.style.borderColor = isActive ? 'var(--accent)' : 'var(--border)';
-        b.style.color = isActive ? 'var(--accent)' : 'var(--muted)';
-        b.style.background = isActive ? 'rgba(255,60,95,0.1)' : 'none';
-        b.querySelector('span').style.color = isActive ? 'var(--accent)' : 'var(--text)';
-      });
-    });
-  });
-
-  // 지우기 모드 ON/OFF
-  eraseToggleBtn.addEventListener('click', () => {
-    eraseMode = !eraseMode;
-    document.body.classList.toggle('erase-active', eraseMode);
-    eraseToggleBtn.textContent = eraseMode ? '✕ 지우기 모드 OFF' : '✕ 지우기 모드 ON';
-    eraseToggleBtn.style.background = eraseMode ? 'rgba(255,60,95,0.35)' : 'rgba(255,60,95,0.15)';
-  });
-
-  // 되돌리기
-  undoEraseBtn.addEventListener('click', () => {
-    if (eraseHistory.length === 0) return;
-    const snap = eraseHistory.pop();
-    ctx.putImageData(snap, 0, 0);
-    undoEraseBtn.disabled = eraseHistory.length === 0;
-  });
-
-  // 캔버스 클릭 → 지우기
+  // ─────────────────────────────────────────────
+  // Erase
+  // ─────────────────────────────────────────────
   outputCanvas.addEventListener('click', e => {
-    if (!eraseMode) return;
+    if (!state.eraseMode) return;
+    if (!outputCanvas.width || !outputCanvas.height) return;
 
-    // 캔버스 내 실제 픽셀 좌표 계산
     const rect = outputCanvas.getBoundingClientRect();
-    const scaleX = outputCanvas.width  / rect.width;
+    const scaleX = outputCanvas.width / rect.width;
     const scaleY = outputCanvas.height / rect.height;
-    const px = Math.floor((e.clientX - rect.left)  * scaleX);
-    const py = Math.floor((e.clientY - rect.top)   * scaleY);
+    const px = Math.floor((e.clientX - rect.left) * scaleX);
+    const py = Math.floor((e.clientY - rect.top) * scaleY);
 
     if (px < 0 || py < 0 || px >= outputCanvas.width || py >= outputCanvas.height) return;
 
-    // 스냅샷 저장
-    eraseHistory.push(ctx.getImageData(0, 0, outputCanvas.width, outputCanvas.height));
-    if (eraseHistory.length > 30) eraseHistory.shift();
-    undoEraseBtn.disabled = false;
-
     const imageData = ctx.getImageData(0, 0, outputCanvas.width, outputCanvas.height);
     const data = imageData.data;
-    const tol  = parseInt(toleranceSlider.value);
-    const idx  = (py * outputCanvas.width + px) * 4;
-    const tr = data[idx], tg = data[idx+1], tb = data[idx+2];
+    const idx = (py * outputCanvas.width + px) * 4;
 
-    // UI 미리보기 갱신
-    const hex = '#' + [tr,tg,tb].map(v=>v.toString(16).padStart(2,'0')).join('');
+    if (data[idx + 3] === 0) return;
+
+    const tr = data[idx];
+    const tg = data[idx + 1];
+    const tb = data[idx + 2];
+    const tol = state.tolerance;
+
+    const maskData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+    const changed = state.eraseType === 'global'
+      ? eraseGlobal(data, maskData.data, tr, tg, tb, tol)
+      : eraseFlood(data, maskData.data, outputCanvas.width, outputCanvas.height, px, py, tr, tg, tb, tol);
+
+    if (!changed) return;
+
+    ctx.putImageData(imageData, 0, 0);
+    maskCtx.putImageData(maskData, 0, 0);
+
+    const hex = '#' + [tr, tg, tb].map(v => v.toString(16).padStart(2, '0')).join('');
     eraseColorPreview.style.background = hex;
     eraseColorHex.textContent = hex.toUpperCase();
 
-    if (eraseType === 'global') {
-      eraseGlobal(data, tr, tg, tb, tol);
-    } else {
-      eraseFlood(data, outputCanvas.width, outputCanvas.height, px, py, tr, tg, tb, tol);
-    }
-
-    ctx.putImageData(imageData, 0, 0);
+    updateActualColorCount();
+    pushHistory('erase');
+    saveSession();
   });
 
-  function colorDist(r,g,b, tr,tg,tb) {
-    return Math.sqrt((r-tr)**2 + (g-tg)**2 + (b-tb)**2);
+  function colorDist(r, g, b, tr, tg, tb) {
+    return Math.sqrt((r - tr) ** 2 + (g - tg) ** 2 + (b - tb) ** 2);
   }
 
-  // 이미지 전체에서 유사 색상 픽셀 삭제
-  function eraseGlobal(data, tr, tg, tb, tol) {
+  function eraseGlobal(data, mask, tr, tg, tb, tol) {
+    let changed = false;
     for (let i = 0; i < data.length; i += 4) {
-      if (data[i+3] === 0) continue;
-      if (colorDist(data[i],data[i+1],data[i+2], tr,tg,tb) <= tol) {
-        data[i+3] = 0;
+      if (data[i + 3] === 0) continue;
+      if (colorDist(data[i], data[i + 1], data[i + 2], tr, tg, tb) <= tol) {
+        data[i + 3] = 0;
+        mask[i + 3] = 0;
+        changed = true;
       }
     }
+    return changed;
   }
 
-  // Flood Fill: 클릭 지점과 연결된 유사색 픽셀만 삭제 (BFS, 4-연결)
-  function eraseFlood(data, w, h, sx, sy, tr, tg, tb, tol) {
+  function eraseFlood(data, mask, w, h, sx, sy, tr, tg, tb, tol) {
     const visited = new Uint8Array(w * h);
     const queue = [[sx, sy]];
+    let head = 0;
+    let changed = false;
+
     visited[sy * w + sx] = 1;
 
-    while (queue.length > 0) {
-      const [x, y] = queue.shift();
+    while (head < queue.length) {
+      const [x, y] = queue[head++];
       const i = (y * w + x) * 4;
-      if (data[i+3] === 0) continue; // 이미 투명
-      if (colorDist(data[i],data[i+1],data[i+2], tr,tg,tb) > tol) continue;
 
-      data[i+3] = 0; // 투명 처리
+      if (data[i + 3] === 0) continue;
+      if (colorDist(data[i], data[i + 1], data[i + 2], tr, tg, tb) > tol) continue;
 
-      const neighbors = [[x-1,y],[x+1,y],[x,y-1],[x,y+1]];
+      data[i + 3] = 0;
+      mask[i + 3] = 0;
+      changed = true;
+
+      const neighbors = [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]];
       for (const [nx, ny] of neighbors) {
         if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
         const ni = ny * w + nx;
         if (visited[ni]) continue;
         visited[ni] = 1;
+
         const di = ni * 4;
-        if (data[di+3] === 0) continue;
-        if (colorDist(data[di],data[di+1],data[di+2], tr,tg,tb) <= tol) {
+        if (data[di + 3] === 0) continue;
+        if (colorDist(data[di], data[di + 1], data[di + 2], tr, tg, tb) <= tol) {
           queue.push([nx, ny]);
         }
       }
     }
+
+    return changed;
   }
+
+  // ─────────────────────────────────────────────
+  // Init
+  // ─────────────────────────────────────────────
+  window.addEventListener('resize', () => {
+    if (outputCanvas.width && outputCanvas.height) fitCanvasToWrap(outputCanvas.width, outputCanvas.height);
+  });
+
+  syncUI();
+  tryRestoreSession();
+})();
 </script>
 </body>
 </html>
