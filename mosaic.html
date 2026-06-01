@@ -61,8 +61,11 @@
   #noiseCanvas {
     position: absolute;
     inset: 0;
+    width: 100%;
+    height: 100%;
     opacity: 0.18;
     pointer-events: none;
+    image-rendering: pixelated;
   }
 
   /* Scanline overlay */
@@ -827,9 +830,12 @@
   // Noise animation
   const nc = noiseCanvas;
   const nctx = nc.getContext('2d');
+  const NOISE_SCALE = 0.22;
   function resizeNoise() {
-    nc.width = window.innerWidth;
-    nc.height = window.innerHeight;
+    // Draw low-resolution noise and let CSS upscale it. This keeps the intro cheap on large displays.
+    nc.width = Math.max(1, Math.floor(window.innerWidth * NOISE_SCALE));
+    nc.height = Math.max(1, Math.floor(window.innerHeight * NOISE_SCALE));
+    nctx.imageSmoothingEnabled = false;
   }
   resizeNoise();
   window.addEventListener('resize', resizeNoise);
@@ -961,9 +967,11 @@
   let renderTimer = null;
   let maskCanvas = null;
   let maskCtx = null;
+  let maskMeta = null;
   let historyStack = [];
   let suppressHistory = false;
   let lastRenderedSourceSize = { width: 0, height: 0 };
+  let renderSeq = 0;
 
   // ─── ACCORDION ───────────────────────────────
   document.querySelectorAll('.sec-head').forEach(head => {
@@ -1017,11 +1025,11 @@
     toleranceVal.textContent = String(state.tolerance);
 
     posterLumSlider.value = state.posterLum;
-    posterLumVal.textContent = state.posterLum === 0 ? 'OFF' : `${state.posterLum}단계`;
+    posterLumVal.textContent = state.posterLum === 0 ? 'OFF' : `${state.posterLum + 1}단계`;
     posterHueSlider.value = state.posterHue;
-    posterHueVal.textContent = state.posterHue === 0 ? 'OFF' : `${state.posterHue}단계`;
+    posterHueVal.textContent = state.posterHue === 0 ? 'OFF' : `${state.posterHue + 1}단계`;
     posterSatSlider.value = state.posterSat;
-    posterSatVal.textContent = state.posterSat === 0 ? 'OFF' : `${state.posterSat}단계`;
+    posterSatVal.textContent = state.posterSat === 0 ? 'OFF' : `${state.posterSat + 1}단계`;
 
     document.querySelectorAll('#pixelBtns .px-btn').forEach(b => {
       b.classList.toggle('active', parseInt(b.dataset.px) === state.pixelSize);
@@ -1083,7 +1091,8 @@
       },
       mask: maskCanvas ? maskCanvas.toDataURL('image/png') : null,
       maskWidth: maskCanvas ? maskCanvas.width : 0,
-      maskHeight: maskCanvas ? maskCanvas.height : 0
+      maskHeight: maskCanvas ? maskCanvas.height : 0,
+      maskMeta: maskMeta ? { ...maskMeta } : null
     };
   }
 
@@ -1147,7 +1156,7 @@
   }
 
   async function restoreMaskFromSnapshot(snap) {
-    maskCanvas = null; maskCtx = null;
+    maskCanvas = null; maskCtx = null; maskMeta = null;
     if (!snap.mask || !snap.maskWidth || !snap.maskHeight) return;
     const img = await loadImage(snap.mask);
     maskCanvas = document.createElement('canvas');
@@ -1156,28 +1165,137 @@
     maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
     maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
     maskCtx.drawImage(img, 0, 0);
+    maskMeta = snap.maskMeta ? { ...snap.maskMeta } : null;
   }
 
   // ─── MASK ─────────────────────────────────────
-  function createFullMask(w, h) {
+  function createFullMask(w, h, meta = null) {
     maskCanvas = document.createElement('canvas');
     maskCanvas.width = w; maskCanvas.height = h;
     maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
     maskCtx.clearRect(0, 0, w, h);
     maskCtx.fillStyle = 'rgba(255,255,255,1)';
     maskCtx.fillRect(0, 0, w, h);
+    maskMeta = meta ? { ...meta } : null;
   }
 
-  function ensureMask(w, h, preserve = true) {
-    if (!preserve || !maskCanvas) { createFullMask(w, h); return; }
-    if (maskCanvas.width === w && maskCanvas.height === h) return;
+  function buildMaskMeta(sourceW, sourceH, blockSize) {
+    return {
+      origWidth: originalImage ? originalImage.width : 0,
+      origHeight: originalImage ? originalImage.height : 0,
+      sourceWidth: sourceW,
+      sourceHeight: sourceH,
+      blockSize,
+      rotationDeg: normalizeAngle(state.rotationDeg || 0),
+      flipX: !!state.flipX,
+      flipY: !!state.flipY
+    };
+  }
+
+  function sameMaskMeta(a, b) {
+    if (!a || !b) return false;
+    return a.origWidth === b.origWidth &&
+      a.origHeight === b.origHeight &&
+      a.sourceWidth === b.sourceWidth &&
+      a.sourceHeight === b.sourceHeight &&
+      a.blockSize === b.blockSize &&
+      a.rotationDeg === b.rotationDeg &&
+      a.flipX === b.flipX &&
+      a.flipY === b.flipY;
+  }
+
+  function sourceToOriginal(meta, x, y) {
+    const rad = meta.rotationDeg * Math.PI / 180;
+    const cos = Math.cos(rad), sin = Math.sin(rad);
+    const tx = x - meta.sourceWidth / 2;
+    const ty = y - meta.sourceHeight / 2;
+
+    // Inverse of translate -> rotate -> scale -> drawImage(centered).
+    let lx = tx * cos + ty * sin;
+    let ly = -tx * sin + ty * cos;
+    if (meta.flipX) lx = -lx;
+    if (meta.flipY) ly = -ly;
+    return {
+      x: lx + meta.origWidth / 2,
+      y: ly + meta.origHeight / 2
+    };
+  }
+
+  function originalToSource(meta, x, y) {
+    const rad = meta.rotationDeg * Math.PI / 180;
+    const cos = Math.cos(rad), sin = Math.sin(rad);
+    let lx = x - meta.origWidth / 2;
+    let ly = y - meta.origHeight / 2;
+    if (meta.flipX) lx = -lx;
+    if (meta.flipY) ly = -ly;
+    return {
+      x: lx * cos - ly * sin + meta.sourceWidth / 2,
+      y: lx * sin + ly * cos + meta.sourceHeight / 2
+    };
+  }
+
+  function remapMask(oldCanvas, oldMeta, newW, newH, newMeta) {
+    const oldCtx = oldCanvas.getContext('2d', { willReadFrequently: true });
+    const oldData = oldCtx.getImageData(0, 0, oldCanvas.width, oldCanvas.height).data;
+
+    const next = document.createElement('canvas');
+    next.width = newW; next.height = newH;
+    const nextCtx = next.getContext('2d', { willReadFrequently: true });
+    const out = nextCtx.createImageData(newW, newH);
+
+    for (let y = 0; y < newH; y++) {
+      for (let x = 0; x < newW; x++) {
+        const i = (y * newW + x) * 4;
+        const sourceX = Math.min(newMeta.sourceWidth - 0.5, (x + 0.5) * newMeta.blockSize);
+        const sourceY = Math.min(newMeta.sourceHeight - 0.5, (y + 0.5) * newMeta.blockSize);
+        const orig = sourceToOriginal(newMeta, sourceX, sourceY);
+        let alpha = 255;
+
+        if (orig.x >= 0 && orig.y >= 0 && orig.x < newMeta.origWidth && orig.y < newMeta.origHeight) {
+          const oldSource = originalToSource(oldMeta, orig.x, orig.y);
+          const ox = Math.floor(oldSource.x / oldMeta.blockSize);
+          const oy = Math.floor(oldSource.y / oldMeta.blockSize);
+          if (ox >= 0 && oy >= 0 && ox < oldCanvas.width && oy < oldCanvas.height) {
+            alpha = oldData[(oy * oldCanvas.width + ox) * 4 + 3];
+          }
+        }
+
+        out.data[i] = 255;
+        out.data[i + 1] = 255;
+        out.data[i + 2] = 255;
+        out.data[i + 3] = alpha;
+      }
+    }
+
+    nextCtx.putImageData(out, 0, 0);
+    return { canvas: next, ctx: nextCtx };
+  }
+
+  function ensureMask(w, h, preserve = true, meta = null) {
+    if (!preserve || !maskCanvas) { createFullMask(w, h, meta); return; }
+    if (maskCanvas.width === w && maskCanvas.height === h && sameMaskMeta(maskMeta, meta)) {
+      maskMeta = meta ? { ...meta } : null;
+      return;
+    }
+
     const old = maskCanvas;
+    const oldMeta = maskMeta ? { ...maskMeta } : null;
+    if (oldMeta && meta && oldMeta.origWidth === meta.origWidth && oldMeta.origHeight === meta.origHeight) {
+      const remapped = remapMask(old, oldMeta, w, h, meta);
+      maskCanvas = remapped.canvas;
+      maskCtx = remapped.ctx;
+      maskMeta = { ...meta };
+      return;
+    }
+
+    // Legacy fallback for snapshots created before mask metadata existed.
     maskCanvas = document.createElement('canvas');
     maskCanvas.width = w; maskCanvas.height = h;
     maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
     maskCtx.clearRect(0, 0, w, h);
     maskCtx.imageSmoothingEnabled = false;
     maskCtx.drawImage(old, 0, 0, old.width, old.height, 0, 0, w, h);
+    maskMeta = meta ? { ...meta } : null;
   }
 
   function applyMaskToOutput() {
@@ -1221,7 +1339,7 @@
       state.rotationDeg = 0; state.flipX = false; state.flipY = false;
       state.eraseMode = false; state.eraseType = 'flood'; state.tolerance = 30;
       state.posterLum = 0; state.posterHue = 0; state.posterSat = 0;
-      maskCanvas = null; maskCtx = null; historyStack = [];
+      maskCanvas = null; maskCtx = null; maskMeta = null; historyStack = [];
 
       sOrigSize.textContent = `${originalImage.width}×${originalImage.height}`;
       filenameRow.innerHTML = `<span>${file.name}</span>`;
@@ -1418,6 +1536,7 @@
   // ─── RENDER ──────────────────────────────────
   async function renderPixelated(options = { preserveMask: true, commit: false }) {
     if (!originalImage) return;
+    const seq = ++renderSeq;
 
     const sourceCanvas = buildTransformedSourceCanvas();
     const blockSize = state.pixelSize;
@@ -1453,12 +1572,15 @@
     const doHue = state.posterHue > 0;
     const doSat = state.posterSat > 0;
     if (doLum || doHue || doSat) {
+      const lumLevels = state.posterLum + 1;
+      const hueLevels = state.posterHue + 1;
+      const satLevels = state.posterSat + 1;
       for (let i = 0; i < data.length; i += 4) {
         if (data[i+3] === 0) continue;
         let [h, s, l] = rgbToHsl(data[i], data[i+1], data[i+2]);
-        if (doLum) { const st = state.posterLum - 1 || 1; l = Math.round(l*st)/st; }
-        if (doHue && s > 0.05) { h = Math.round(h*state.posterHue)/state.posterHue; }
-        if (doSat) { const st = state.posterSat - 1 || 1; s = Math.round(s*st)/st; }
+        if (doLum) l = quantizeUnit(l, lumLevels);
+        if (doHue && s > 0.05) h = quantizeHue(h, hueLevels);
+        if (doSat) s = quantizeUnit(s, satLevels);
         const [nr,ng,nb] = hslToRgb(h,s,l);
         data[i]=nr; data[i+1]=ng; data[i+2]=nb;
       }
@@ -1469,12 +1591,22 @@
     if (state.targetColors < 65536) {
       setProcessing(true);
       await sleepFrame();
-      const palette = medianCut(data, Math.min(state.targetColors, 256));
-      applyPalette(data, palette);
-      shownColorCount = palette.length;
-      setProcessing(false);
+      try {
+        const result = await quantizeWithWorker(data, Math.min(state.targetColors, 256));
+        if (seq !== renderSeq) return;
+        data.set(result.data);
+        shownColorCount = result.paletteLength;
+      } catch (err) {
+        console.warn('Worker quantize failed; falling back to main thread:', err);
+        const palette = medianCut(data, Math.min(state.targetColors, 256));
+        applyPalette(data, palette);
+        shownColorCount = palette.length;
+      } finally {
+        if (seq === renderSeq) setProcessing(false);
+      }
     }
 
+    if (seq !== renderSeq) return;
     sc.putImageData(imageData, 0, 0);
     outputCanvas.width = sw;
     outputCanvas.height = sh;
@@ -1482,7 +1614,8 @@
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(small, 0, 0, sw, sh, 0, 0, sw, sh);
 
-    ensureMask(sw, sh, options.preserveMask);
+    const nextMaskMeta = buildMaskMeta(W, H, blockSize);
+    ensureMask(sw, sh, options.preserveMask, nextMaskMeta);
     applyMaskToOutput();
     fitCanvasToWrap(sw, sh);
 
@@ -1503,8 +1636,7 @@
   function fitCanvasToWrap(sw, sh) {
     const maxW = Math.max(1, canvasWrap.clientWidth - 32);
     const maxH = Math.max(1, canvasWrap.clientHeight - 32);
-    const scale = Math.min(maxW / sw, maxH / sh, 1) * (sw < 200 ? Math.min(maxW/sw, maxH/sh) : 1);
-    const finalScale = Math.min(maxW/sw, maxH/sh);
+    const finalScale = Math.min(maxW / sw, maxH / sh);
     outputCanvas.style.width  = `${Math.max(1, Math.round(sw * finalScale))}px`;
     outputCanvas.style.height = `${Math.max(1, Math.round(sh * finalScale))}px`;
   }
@@ -1568,7 +1700,146 @@
     return [clamp(hue2rgb(p,q,h+1/3)*255), clamp(hue2rgb(p,q,h)*255), clamp(hue2rgb(p,q,h-1/3)*255)];
   }
 
+  function quantizeUnit(v, levels) {
+    if (levels <= 1) return v;
+    return Math.round(v * (levels - 1)) / (levels - 1);
+  }
+
+  function quantizeHue(h, levels) {
+    if (levels <= 1) return h;
+    return (Math.round(h * levels) % levels) / levels;
+  }
+
   // ─── PALETTE ──────────────────────────────────
+  const PALETTE_WORKER_CODE = `
+self.onmessage = event => {
+  try {
+    const data = new Uint8ClampedArray(event.data.buffer);
+    const maxColors = event.data.maxColors;
+    const palette = medianCut(data, maxColors);
+    applyPalette(data, palette);
+    self.postMessage({ buffer: data.buffer, paletteLength: palette.length }, [data.buffer]);
+  } catch (err) {
+    self.postMessage({ error: err && err.message ? err.message : String(err) });
+  }
+};
+
+function applyPalette(data, palette) {
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i+3] === 0) continue;
+    const c = nearestColor(data[i], data[i+1], data[i+2], palette);
+    data[i] = c[0]; data[i+1] = c[1]; data[i+2] = c[2];
+  }
+}
+
+function nearestColor(r, g, b, palette) {
+  let best = palette[0], bestDist = Infinity;
+  for (const c of palette) {
+    const d = (r-c[0])**2 + (g-c[1])**2 + (b-c[2])**2;
+    if (d < bestDist) { bestDist = d; best = c; }
+  }
+  return best;
+}
+
+function medianCut(data, maxColors) {
+  const pixels = [], total = data.length / 4;
+  const step = Math.max(1, Math.floor(total / 8000));
+  for (let p = 0; p < total; p += step) {
+    const i = p * 4;
+    if (data[i+3] === 0) continue;
+    pixels.push([data[i], data[i+1], data[i+2]]);
+  }
+  if (pixels.length === 0) return [[0,0,0]];
+  const buckets = [pixels];
+  while (buckets.length < maxColors) {
+    let maxRange = -1, splitIdx = -1;
+    for (let i = 0; i < buckets.length; i++) {
+      if (buckets[i].length <= 1) continue;
+      const range = colorRange(buckets[i]);
+      if (range > maxRange) { maxRange = range; splitIdx = i; }
+    }
+    if (splitIdx === -1 || maxRange <= 0) break;
+    const bucket = buckets.splice(splitIdx, 1)[0];
+    const pair = splitBucket(bucket);
+    if (pair[0].length) buckets.push(pair[0]);
+    if (pair[1].length) buckets.push(pair[1]);
+  }
+  return buckets.map(bucket => {
+    let r = 0, g = 0, b = 0;
+    for (const p of bucket) { r += p[0]; g += p[1]; b += p[2]; }
+    const n = bucket.length || 1;
+    return [Math.round(r/n), Math.round(g/n), Math.round(b/n)];
+  });
+}
+
+function colorRange(bucket) {
+  let minR=255,maxR=0,minG=255,maxG=0,minB=255,maxB=0;
+  for (const p of bucket) {
+    const r=p[0], g=p[1], b=p[2];
+    if(r<minR)minR=r;if(r>maxR)maxR=r;
+    if(g<minG)minG=g;if(g>maxG)maxG=g;
+    if(b<minB)minB=b;if(b>maxB)maxB=b;
+  }
+  return Math.max(maxR-minR, maxG-minG, maxB-minB);
+}
+
+function splitBucket(bucket) {
+  let minR=255,maxR=0,minG=255,maxG=0,minB=255,maxB=0;
+  for (const p of bucket) {
+    const r=p[0], g=p[1], b=p[2];
+    if(r<minR)minR=r;if(r>maxR)maxR=r;
+    if(g<minG)minG=g;if(g>maxG)maxG=g;
+    if(b<minB)minB=b;if(b>maxB)maxB=b;
+  }
+  const rR=maxR-minR, gR=maxG-minG, bR=maxB-minB;
+  const ch=rR>=gR&&rR>=bR?0:(gR>=bR?1:2);
+  bucket.sort((a,b)=>a[ch]-b[ch]);
+  const mid=Math.floor(bucket.length/2);
+  return [bucket.slice(0,mid), bucket.slice(mid)];
+}
+`;
+
+  function quantizeWithWorker(data, maxColors) {
+    return new Promise((resolve, reject) => {
+      if (!window.Worker || !window.Blob || !window.URL) {
+        reject(new Error('Worker API unavailable'));
+        return;
+      }
+
+      const blob = new Blob([PALETTE_WORKER_CODE], { type: 'application/javascript' });
+      const url = URL.createObjectURL(blob);
+      const worker = new Worker(url);
+      const copy = new Uint8ClampedArray(data);
+      let done = false;
+
+      const cleanup = () => {
+        worker.terminate();
+        URL.revokeObjectURL(url);
+      };
+
+      worker.onmessage = event => {
+        if (done) return;
+        done = true;
+        cleanup();
+        if (event.data && event.data.error) {
+          reject(new Error(event.data.error));
+          return;
+        }
+        resolve({
+          data: new Uint8ClampedArray(event.data.buffer),
+          paletteLength: event.data.paletteLength
+        });
+      };
+      worker.onerror = event => {
+        if (done) return;
+        done = true;
+        cleanup();
+        reject(event.error || new Error(event.message || 'Worker error'));
+      };
+      worker.postMessage({ buffer: copy.buffer, maxColors }, [copy.buffer]);
+    });
+  }
+
   function applyPalette(data, palette) {
     for (let i = 0; i < data.length; i += 4) {
       if (data[i+3] === 0) continue;
