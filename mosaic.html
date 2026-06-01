@@ -257,6 +257,31 @@
     flex-shrink: 0;
   }
 
+
+  .color-input {
+    width: 38px;
+    height: 24px;
+    padding: 0;
+    border: 1px solid var(--border2);
+    background: none;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .hex-input {
+    flex: 1;
+    min-width: 0;
+    background: #0b0b12;
+    border: 1px solid var(--border2);
+    color: var(--accent2);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    padding: 6px 8px;
+    outline: none;
+    text-transform: uppercase;
+  }
+  .hex-input:focus { border-color: var(--accent2); }
+
   input[type=range] {
     -webkit-appearance: none;
     flex: 1;
@@ -770,6 +795,34 @@
         </div>
       </div>
 
+      <!-- OUTLINE -->
+      <div class="sec open">
+        <div class="sec-head">
+          <span class="sec-icon">▣</span>
+          <span class="sec-title">테두리</span>
+          <span class="sec-arrow">▶</span>
+        </div>
+        <div class="sec-body">
+          <div class="tx-grid full" style="margin-bottom:8px;">
+            <button class="tx-btn" id="outlineToggleBtn">테두리 OFF</button>
+          </div>
+          <div class="tx-grid" id="outlineModeBtns" style="margin-bottom:8px;">
+            <button class="tx-btn" id="outlineModeInner" data-mode="inner">INNER<br><small>색 픽셀이 투명과 접함</small></button>
+            <button class="tx-btn" id="outlineModeOuter" data-mode="outer">OUTER<br><small>투명 픽셀이 색과 접함</small></button>
+          </div>
+          <div class="ctrl-row">
+            <span class="ctrl-label">두께</span>
+            <input type="range" id="outlineThickness" min="1" max="8" value="1" step="1" />
+            <span class="ctrl-val" id="outlineThicknessVal">1px</span>
+          </div>
+          <div class="ctrl-row">
+            <span class="ctrl-label">색상</span>
+            <input type="color" id="outlineColorPicker" class="color-input" value="#000000" />
+            <input type="text" id="outlineColorHex" class="hex-input" value="#000000" maxlength="7" spellcheck="false" />
+          </div>
+        </div>
+      </div>
+
       <!-- EXPORT -->
       <div class="sec open">
         <div class="sec-head">
@@ -934,6 +987,12 @@
   const eraseColorPreview = $('eraseColorPreview');
   const eraseColorHex = $('eraseColorHex');
 
+  const outlineToggleBtn = $('outlineToggleBtn');
+  const outlineThicknessSlider = $('outlineThickness');
+  const outlineThicknessVal = $('outlineThicknessVal');
+  const outlineColorPicker = $('outlineColorPicker');
+  const outlineColorHex = $('outlineColorHex');
+
   // Status bar (bottom)
   const sOrigSize = $('sbOrigSize');
   const sTransformedSize = $('sbTransformedSize');
@@ -960,7 +1019,11 @@
     tolerance: 30,
     posterLum: 0,
     posterHue: 0,
-    posterSat: 0
+    posterSat: 0,
+    outlineEnabled: false,
+    outlineMode: 'outer',
+    outlineThickness: 1,
+    outlineColor: '#000000'
   };
 
   let originalImage = null;
@@ -1010,6 +1073,17 @@
     }
   }
 
+  function normalizeHexColor(value, fallback = '#000000') {
+    const raw = String(value ?? '').trim().replace(/^#+/, '');
+    if (/^[0-9a-fA-F]{3}$/.test(raw)) {
+      return '#' + raw.split('').map(ch => ch + ch).join('').toUpperCase();
+    }
+    if (/^[0-9a-fA-F]{6}$/.test(raw)) {
+      return '#' + raw.toUpperCase();
+    }
+    return fallback.toUpperCase();
+  }
+
   // ─── UI SYNC ─────────────────────────────────
   function syncUI() {
     rotationSlider.value = state.rotationDeg;
@@ -1031,6 +1105,13 @@
     posterSatSlider.value = state.posterSat;
     posterSatVal.textContent = state.posterSat === 0 ? 'OFF' : `${state.posterSat + 1}단계`;
 
+    outlineThicknessSlider.value = state.outlineThickness;
+    outlineThicknessVal.textContent = `${state.outlineThickness}px`;
+    outlineColorPicker.value = state.outlineColor;
+    outlineColorHex.value = state.outlineColor.toUpperCase();
+    outlineToggleBtn.textContent = state.outlineEnabled ? '테두리 ON' : '테두리 OFF';
+    outlineToggleBtn.classList.toggle('active', state.outlineEnabled);
+
     document.querySelectorAll('#pixelBtns .px-btn').forEach(b => {
       b.classList.toggle('active', parseInt(b.dataset.px) === state.pixelSize);
     });
@@ -1051,6 +1132,10 @@
       b.style.color = on ? 'var(--accent)' : 'var(--muted2)';
       b.style.background = on ? 'rgba(255,60,95,0.1)' : 'none';
       b.querySelector('.et-title').style.color = on ? 'var(--accent)' : 'var(--text)';
+    });
+
+    document.querySelectorAll('#outlineModeBtns .tx-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.mode === state.outlineMode);
     });
 
     updateTransformStatus();
@@ -1087,7 +1172,11 @@
         tolerance: state.tolerance,
         posterLum: state.posterLum,
         posterHue: state.posterHue,
-        posterSat: state.posterSat
+        posterSat: state.posterSat,
+        outlineEnabled: state.outlineEnabled,
+        outlineMode: state.outlineMode,
+        outlineThickness: state.outlineThickness,
+        outlineColor: state.outlineColor
       },
       mask: maskCanvas ? maskCanvas.toDataURL('image/png') : null,
       maskWidth: maskCanvas ? maskCanvas.width : 0,
@@ -1144,6 +1233,7 @@
     state.imageSrc = snap.imageSrc;
     setObject(state, snap.settings || {});
     state.rotationDeg = normalizeAngle(state.rotationDeg || 0);
+    state.outlineColor = normalizeHexColor(state.outlineColor, '#000000');
     state.eraseMode = false;
     originalImage = await loadImage(state.imageSrc);
     sOrigSize.textContent = `${originalImage.width}×${originalImage.height}`;
@@ -1339,6 +1429,7 @@
       state.rotationDeg = 0; state.flipX = false; state.flipY = false;
       state.eraseMode = false; state.eraseType = 'flood'; state.tolerance = 30;
       state.posterLum = 0; state.posterHue = 0; state.posterSat = 0;
+      state.outlineEnabled = false; state.outlineMode = 'outer'; state.outlineThickness = 1; state.outlineColor = '#000000';
       maskCanvas = null; maskCtx = null; maskMeta = null; historyStack = [];
 
       sOrigSize.textContent = `${originalImage.width}×${originalImage.height}`;
@@ -1432,6 +1523,58 @@
     state.posterSat = parseInt(posterSatSlider.value);
     syncUI();
     if (originalImage) scheduleRender();
+  });
+
+  outlineToggleBtn.addEventListener('click', () => {
+    state.outlineEnabled = !state.outlineEnabled;
+    syncUI();
+    if (originalImage) scheduleRender();
+    else saveSession();
+  });
+
+  document.querySelectorAll('#outlineModeBtns .tx-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      state.outlineMode = b.dataset.mode;
+      syncUI();
+      if (originalImage) scheduleRender();
+      else saveSession();
+    });
+  });
+
+  outlineThicknessSlider.addEventListener('input', () => {
+    state.outlineThickness = Math.max(1, parseInt(outlineThicknessSlider.value) || 1);
+    syncUI();
+    if (originalImage) scheduleRender();
+    else saveSession();
+  });
+
+  outlineColorPicker.addEventListener('input', () => {
+    state.outlineColor = normalizeHexColor(outlineColorPicker.value, state.outlineColor);
+    syncUI();
+    if (originalImage) scheduleRender();
+    else saveSession();
+  });
+
+  outlineColorHex.addEventListener('input', () => {
+    outlineColorHex.value = outlineColorHex.value.toUpperCase();
+  });
+
+  function commitOutlineHex() {
+    const normalized = normalizeHexColor(outlineColorHex.value, state.outlineColor);
+    state.outlineColor = normalized;
+    syncUI();
+    if (originalImage) scheduleRender();
+    else saveSession();
+  }
+
+  outlineColorHex.addEventListener('change', commitOutlineHex);
+  outlineColorHex.addEventListener('blur', commitOutlineHex);
+  outlineColorHex.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      commitOutlineHex();
+      outlineColorHex.blur();
+    }
   });
 
   toleranceSlider.addEventListener('input', () => {
@@ -1617,6 +1760,7 @@
     const nextMaskMeta = buildMaskMeta(W, H, blockSize);
     ensureMask(sw, sh, options.preserveMask, nextMaskMeta);
     applyMaskToOutput();
+    applyOutlineToOutput();
     fitCanvasToWrap(sw, sh);
 
     emptyState.style.display = 'none';
@@ -1631,6 +1775,74 @@
 
     if (options.commit && !suppressHistory) pushHistory('render');
     saveSession();
+  }
+
+  function applyOutlineToOutput() {
+    if (!state.outlineEnabled || !outputCanvas.width || !outputCanvas.height) return;
+
+    const w = outputCanvas.width;
+    const h = outputCanvas.height;
+    const thickness = Math.max(1, state.outlineThickness | 0);
+    const mode = state.outlineMode === 'inner' ? 'inner' : 'outer';
+    const outlineRgb = hexToRgb(state.outlineColor);
+    const imageData = ctx.getImageData(0, 0, w, h);
+    const data = imageData.data;
+    const source = new Uint8ClampedArray(data);
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const idx = (y * w + x) * 4;
+        const opaque = source[idx + 3] > 0;
+        if (mode === 'inner' && !opaque) continue;
+        if (mode === 'outer' && opaque) continue;
+
+        let shouldOutline = false;
+        for (let dy = -thickness; dy <= thickness && !shouldOutline; dy++) {
+          for (let dx = -thickness; dx <= thickness; dx++) {
+            if (dx === 0 && dy === 0) continue;
+            if (Math.max(Math.abs(dx), Math.abs(dy)) > thickness) continue;
+            const nx = x + dx;
+            const ny = y + dy;
+
+            if (mode === 'inner') {
+              if (nx < 0 || ny < 0 || nx >= w || ny >= h) {
+                shouldOutline = true;
+                break;
+              }
+              const nIdx = (ny * w + nx) * 4;
+              if (source[nIdx + 3] === 0) {
+                shouldOutline = true;
+                break;
+              }
+            } else {
+              if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+              const nIdx = (ny * w + nx) * 4;
+              if (source[nIdx + 3] > 0) {
+                shouldOutline = true;
+                break;
+              }
+            }
+          }
+        }
+
+        if (!shouldOutline) continue;
+        data[idx] = outlineRgb[0];
+        data[idx + 1] = outlineRgb[1];
+        data[idx + 2] = outlineRgb[2];
+        data[idx + 3] = 255;
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+  }
+
+  function hexToRgb(hex) {
+    const normalized = normalizeHexColor(hex, '#000000');
+    return [
+      parseInt(normalized.slice(1, 3), 16),
+      parseInt(normalized.slice(3, 5), 16),
+      parseInt(normalized.slice(5, 7), 16)
+    ];
   }
 
   function fitCanvasToWrap(sw, sh) {
