@@ -273,29 +273,30 @@
   }
   input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.4); }
 
-  /* Pixel size grid */
-  .px-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 4px;
+  /* Pixel size free input */
+  .px-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     margin-bottom: 8px;
   }
-  .px-btn {
-    background: none;
-    border: 1px solid var(--border2);
-    color: var(--muted2);
+  .px-number {
+    width: 52px;
+    background: var(--panel2);
+    border: 1px solid var(--accent);
+    color: var(--accent2);
     font-family: 'Space Mono', monospace;
-    font-size: 0.55rem;
-    padding: 5px 2px;
-    cursor: pointer;
-    transition: all 0.12s;
+    font-size: 0.7rem;
+    font-weight: 700;
     text-align: center;
-    line-height: 1.4;
+    padding: 4px 4px;
+    outline: none;
+    -moz-appearance: textfield;
   }
-  .px-btn strong { display: block; color: var(--text); font-size: 0.6rem; }
-  .px-btn:hover { border-color: var(--accent2); }
-  .px-btn.active { border-color: var(--accent); background: rgba(255,60,95,0.12); color: var(--accent); }
-  .px-btn.active strong { color: var(--accent); }
+  .px-number::-webkit-inner-spin-button,
+  .px-number::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .px-number:focus { border-color: var(--accent2); }
+  .px-unit { font-size: 0.56rem; color: var(--muted2); flex-shrink: 0; }
 
   /* Color preset grid */
   .color-grid {
@@ -672,12 +673,15 @@
           <span class="sec-arrow">▶</span>
         </div>
         <div class="sec-body">
-          <div class="px-grid" id="pixelBtns">
-            <button class="px-btn" data-px="2"><strong>2</strong>px</button>
-            <button class="px-btn" data-px="4"><strong>4</strong>px</button>
-            <button class="px-btn active" data-px="8"><strong>8</strong>px</button>
-            <button class="px-btn" data-px="16"><strong>16</strong>px</button>
-            <button class="px-btn" data-px="32"><strong>32</strong>px</button>
+          <div class="ctrl-row">
+            <span class="ctrl-label">블록 크기</span>
+            <input type="range" id="pixelSlider" min="1" max="128" value="8" step="1" />
+            <span class="ctrl-val" id="pixelSliderVal">8px</span>
+          </div>
+          <div class="px-input-wrap">
+            <span class="px-unit">직접 입력</span>
+            <input type="number" id="pixelNumberInput" class="px-number" min="1" max="512" value="8" />
+            <span class="px-unit">px</span>
           </div>
           <div class="ctrl-row">
             <span class="ctrl-label">채도</span>
@@ -1023,9 +1027,9 @@
     posterSatSlider.value = state.posterSat;
     posterSatVal.textContent = state.posterSat === 0 ? 'OFF' : `${state.posterSat}단계`;
 
-    document.querySelectorAll('#pixelBtns .px-btn').forEach(b => {
-      b.classList.toggle('active', parseInt(b.dataset.px) === state.pixelSize);
-    });
+    document.getElementById('pixelSlider').value = Math.min(state.pixelSize, 128);
+    document.getElementById('pixelSliderVal').textContent = `${state.pixelSize}px`;
+    document.getElementById('pixelNumberInput').value = state.pixelSize;
     document.querySelectorAll('#colorPresetBtns .color-btn').forEach(b => {
       b.classList.toggle('active', parseInt(b.dataset.colors) === state.targetColors);
     });
@@ -1239,12 +1243,31 @@
     renderTimer = setTimeout(() => renderPixelated(opts), 80);
   }
 
-  document.querySelectorAll('#pixelBtns .px-btn').forEach(b => {
-    b.addEventListener('click', () => {
-      state.pixelSize = parseInt(b.dataset.px);
-      syncUI();
-      if (originalImage) scheduleRender();
-    });
+  const pixelSlider = document.getElementById('pixelSlider');
+  const pixelSliderVal = document.getElementById('pixelSliderVal');
+  const pixelNumberInput = document.getElementById('pixelNumberInput');
+
+  function setPixelSize(val) {
+    const v = Math.max(1, Math.min(512, Math.round(val)));
+    state.pixelSize = v;
+    pixelSlider.value = Math.min(v, 128);
+    pixelSliderVal.textContent = `${v}px`;
+    pixelNumberInput.value = v;
+    if (originalImage) scheduleRender();
+  }
+
+  pixelSlider.addEventListener('input', () => {
+    setPixelSize(parseInt(pixelSlider.value));
+  });
+
+  pixelNumberInput.addEventListener('change', () => {
+    const v = parseInt(pixelNumberInput.value);
+    if (!isNaN(v)) setPixelSize(v);
+  });
+  pixelNumberInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.target.blur(); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); setPixelSize(state.pixelSize + 1); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setPixelSize(Math.max(1, state.pixelSize - 1)); }
   });
 
   satSlider.addEventListener('input', () => {
