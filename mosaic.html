@@ -646,7 +646,7 @@
     <span class="top-spacer"></span>
     <div class="top-status">
       <span>원본<span class="sv" id="sOrigSize">—</span></span>
-      <span>변환<span class="sv" id="sTransformedSize">—</span></span>
+      <span>변환 후<span class="sv" id="sTransformedSize">—</span></span>
       <span>블록<span class="sv" id="sBlock">—</span></span>
       <span>색상<span class="sv" id="sColors">—</span></span>
       <span>실제색<span class="sv" id="sActualColors">—</span></span>
@@ -1020,14 +1020,18 @@
   const outlineColorPicker = $('outlineColorPicker');
   const outlineColorHex = $('outlineColorHex');
 
-  // Status bar (bottom)
-  const sOrigSize = $('sbOrigSize');
-  const sTransformedSize = $('sbTransformedSize');
-  const sBlock = $('sbBlock');
-  const sColors = $('sbColors');
-  const sActualColors = $('sbActualColors');
-  const sTransform = $('sbTransform');
-  const sHistory = $('sbHistory');
+  // Status bars: 상단(s*)과 하단(sb*)을 함께 갱신
+  function statusPair(name) {
+    const els = [$('s' + name), $('sb' + name)].filter(Boolean);
+    return { set textContent(v) { els.forEach(el => { el.textContent = v; }); } };
+  }
+  const sOrigSize = statusPair('OrigSize');
+  const sTransformedSize = statusPair('TransformedSize');
+  const sBlock = statusPair('Block');
+  const sColors = statusPair('Colors');
+  const sActualColors = statusPair('ActualColors');
+  const sTransform = statusPair('Transform');
+  const sHistory = statusPair('History');
 
   // ─── STATE ────────────────────────────────────
   const SESSION_KEY = 'mosaic_v2_3_session';
@@ -1393,7 +1397,7 @@
       suppressHistory = true;
       await restoreSnapshot(saved, { push: false, save: false });
       suppressHistory = false;
-      filenameRow.innerHTML = `<span>복원됨</span>`;
+      setFilename(info.name ? `복원됨 · ${info.name}` : '복원됨', info.name || '');
       historyStack = [snapshot('session-restored')];
       updateHistoryUI();
       if (legacy) {
@@ -1600,6 +1604,13 @@
   esDropZone.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
 
+  function setFilename(label, title = '') {
+    const span = document.createElement('span');
+    span.textContent = label;
+    filenameRow.replaceChildren(span);
+    filenameRow.title = title;
+  }
+
   function newImageId() {
     return `img_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
   }
@@ -1666,6 +1677,7 @@
       if (seq === loadSeq) {
         setProcessing(false);
         filenameRow.textContent = '이미지를 불러올 수 없습니다';
+        filenameRow.title = file.name || '';
       }
       return;
     }
@@ -1688,7 +1700,7 @@
     state.outlineEnabled = false; state.outlineMode = 'outer'; state.outlineThickness = 1; state.outlineColor = '#000000';
     maskCanvas = null; maskCtx = null; maskMeta = null; historyStack = [];
 
-    filenameRow.innerHTML = `<span>${file.name}</span>`;
+    setFilename(file.name || '붙여넣은 이미지', file.name || '');
     syncUI();
     await renderPixelated({ preserveMask: false, commit: false });
     setProcessing(false);
