@@ -4,6 +4,11 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>MOSAIC V2.3</title>
+<script>
+  // 첫 방문 이후에는 인트로를 건너뛴다 (깜빡임 방지를 위해 렌더 전에 지정)
+  try { if (localStorage.getItem('mosaic_intro_seen') === '1') document.documentElement.classList.add('intro-seen'); }
+  catch (e) { /* storage unavailable */ }
+</script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&display=swap');
 
@@ -16,8 +21,8 @@
     --accent: #ff3c5f;
     --accent2: #00e5ff;
     --text: #e8e8f0;
-    --muted: #44445a;
-    --muted2: #666688;
+    --muted: #7e7e9c;   /* ≈4.9:1 on --panel */
+    --muted2: #9c9cbc;  /* ≈7.2:1 on --panel */
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -27,6 +32,7 @@
     color: var(--text);
     font-family: 'Space Mono', monospace;
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -85,7 +91,7 @@
   }
 
   .intro-sub {
-    font-size: 0.65rem;
+    font-size: 0.75rem;
     letter-spacing: 0.3em;
     color: var(--muted2);
     margin-top: 18px;
@@ -98,7 +104,7 @@
     position: absolute;
     bottom: 32px;
     right: 40px;
-    font-size: 0.6rem;
+    font-size: 0.72rem;
     color: var(--muted);
     letter-spacing: 0.2em;
     border: 1px solid var(--border2);
@@ -109,7 +115,7 @@
     position: absolute;
     bottom: 32px;
     left: 40px;
-    font-size: 0.6rem;
+    font-size: 0.72rem;
     color: var(--muted);
     letter-spacing: 0.15em;
   }
@@ -119,10 +125,14 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
+    height: 100dvh;
     opacity: 0;
     transition: opacity 0.4s ease 0.15s;
   }
   #app.visible { opacity: 1; }
+  /* 재방문: 인트로 생략 (head 스크립트가 html.intro-seen 지정) */
+  html.intro-seen #intro { display: none; }
+  html.intro-seen #app { opacity: 1; transition: none; }
 
   /* Top bar */
   #topbar {
@@ -150,9 +160,15 @@
     letter-spacing: 0.12em;
     line-height: 1;
     color: var(--text);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
   }
+  .top-title:hover { color: var(--accent); }
+  .top-title:focus-visible { outline: 1px solid var(--accent2); outline-offset: 3px; }
   .top-tag {
-    font-size: 0.55rem;
+    font-size: 0.7rem;
     color: var(--accent2);
     letter-spacing: 0.2em;
     border: 1px solid var(--accent2);
@@ -162,8 +178,10 @@
   .top-spacer { flex: 1; }
   .top-status {
     display: flex;
-    gap: 18px;
-    font-size: 0.55rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 4px 16px;
+    font-size: 0.7rem;
     color: var(--muted2);
     letter-spacing: 0.08em;
   }
@@ -178,7 +196,7 @@
 
   /* ─── SIDE PANEL ─── */
   #panel {
-    width: 260px;
+    width: 280px;
     flex-shrink: 0;
     background: var(--panel);
     border-right: 1px solid var(--border);
@@ -207,6 +225,7 @@
     transition: background 0.12s;
   }
   .sec-head:hover { background: #16162a; }
+  .sec-head:focus-visible { outline: 1px solid var(--accent2); outline-offset: -1px; }
   .sec-head .sec-icon {
     font-size: 0.75rem;
     width: 16px;
@@ -214,14 +233,14 @@
     flex-shrink: 0;
   }
   .sec-head .sec-title {
-    font-size: 0.58rem;
+    font-size: 0.72rem;
     letter-spacing: 0.22em;
     text-transform: uppercase;
     color: var(--muted2);
     flex: 1;
   }
   .sec-head .sec-arrow {
-    font-size: 0.55rem;
+    font-size: 0.7rem;
     color: var(--muted);
     transition: transform 0.2s;
   }
@@ -242,14 +261,14 @@
   }
   .ctrl-row:last-child { margin-bottom: 0; }
   .ctrl-label {
-    font-size: 0.56rem;
+    font-size: 0.7rem;
     color: var(--muted2);
     letter-spacing: 0.06em;
     min-width: 56px;
     flex-shrink: 0;
   }
   .ctrl-val {
-    font-size: 0.6rem;
+    font-size: 0.72rem;
     color: var(--accent2);
     font-weight: 700;
     min-width: 40px;
@@ -275,7 +294,7 @@
     border: 1px solid var(--border2);
     color: var(--accent2);
     font-family: 'Space Mono', monospace;
-    font-size: 0.58rem;
+    font-size: 0.72rem;
     padding: 6px 8px;
     outline: none;
     text-transform: uppercase;
@@ -314,7 +333,7 @@
     border: 1px solid var(--accent);
     color: var(--accent2);
     font-family: 'Space Mono', monospace;
-    font-size: 0.7rem;
+    font-size: 0.8rem;
     font-weight: 700;
     text-align: center;
     padding: 4px 4px;
@@ -324,7 +343,7 @@
   .px-number::-webkit-inner-spin-button,
   .px-number::-webkit-outer-spin-button { -webkit-appearance: none; }
   .px-number:focus { border-color: var(--accent2); }
-  .px-unit { font-size: 0.56rem; color: var(--muted2); flex-shrink: 0; }
+  .px-unit { font-size: 0.7rem; color: var(--muted2); flex-shrink: 0; }
 
   /* Color preset grid */
   .color-grid {
@@ -338,14 +357,14 @@
     border: 1px solid var(--border2);
     color: var(--muted2);
     font-family: 'Space Mono', monospace;
-    font-size: 0.5rem;
+    font-size: 0.7rem;
     padding: 5px 2px;
     cursor: pointer;
     transition: all 0.12s;
     text-align: center;
     line-height: 1.5;
   }
-  .color-btn strong { display: block; color: var(--text); font-size: 0.55rem; }
+  .color-btn strong { display: block; color: var(--text); font-size: 0.74rem; }
   .color-btn:hover { border-color: var(--accent2); }
   .color-btn.active { border-color: var(--accent); background: rgba(255,60,95,0.12); color: var(--accent); }
   .color-btn.active strong { color: var(--accent); }
@@ -364,7 +383,7 @@
     border: 1px solid var(--border2);
     color: var(--muted2);
     font-family: 'Space Mono', monospace;
-    font-size: 0.55rem;
+    font-size: 0.7rem;
     letter-spacing: 0.04em;
     padding: 7px 4px;
     cursor: pointer;
@@ -373,6 +392,7 @@
   }
   .tx-btn:hover { border-color: var(--accent2); color: var(--accent2); }
   .tx-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(255,60,95,0.1); }
+  .tx-btn small { font-size: 0.7rem; }
 
   /* Erase mode */
   .erase-type-grid {
@@ -386,21 +406,21 @@
     border: 1px solid var(--border2);
     color: var(--muted2);
     font-family: 'Space Mono', monospace;
-    font-size: 0.52rem;
+    font-size: 0.7rem;
     padding: 6px 4px;
     cursor: pointer;
     text-align: center;
     line-height: 1.5;
     transition: all .12s;
   }
-  .erase-type-btn .et-title { display: block; font-size: 0.6rem; font-weight: 700; color: var(--text); }
+  .erase-type-btn .et-title { display: block; font-size: 0.72rem; font-weight: 700; color: var(--text); }
 
   /* Full-width button */
   .full-btn {
     width: 100%;
     padding: 8px 12px;
     font-family: 'Space Mono', monospace;
-    font-size: 0.6rem;
+    font-size: 0.72rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     cursor: pointer;
@@ -437,9 +457,9 @@
     background: #555;
     flex-shrink: 0;
   }
-  .erase-hex { font-size: 0.58rem; color: var(--accent2); letter-spacing: 0.1em; }
+  .erase-hex { font-size: 0.72rem; color: var(--accent2); letter-spacing: 0.1em; }
 
-  .mini-note { font-size: 0.56rem; color: var(--muted2); line-height: 1.65; margin-bottom: 8px; }
+  .mini-note { font-size: 0.7rem; color: var(--muted2); line-height: 1.65; margin-bottom: 8px; }
 
   /* Divider */
   .div { height: 1px; background: var(--border); margin: 8px 0; }
@@ -502,7 +522,7 @@
     line-height: 1;
   }
   #emptyState .es-sub {
-    font-size: 0.6rem;
+    font-size: 0.72rem;
     color: var(--muted);
     letter-spacing: 0.18em;
     text-transform: uppercase;
@@ -512,7 +532,7 @@
     margin-top: 24px;
     border: 1px dashed var(--border2);
     padding: 14px 28px;
-    font-size: 0.6rem;
+    font-size: 0.72rem;
     color: var(--muted);
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -549,7 +569,7 @@
     justify-content: center;
     flex-direction: column;
     gap: 10px;
-    font-size: 0.62rem;
+    font-size: 0.74rem;
     letter-spacing: 0.2em;
     color: var(--accent2);
     text-transform: uppercase;
@@ -574,8 +594,8 @@
     background: #0a0a12;
     padding: 5px 16px;
     display: flex;
-    gap: 20px;
-    font-size: 0.52rem;
+    gap: 4px 20px;
+    font-size: 0.7rem;
     color: var(--muted);
     letter-spacing: 0.1em;
     flex-wrap: wrap;
@@ -596,7 +616,7 @@
     border: 1px dashed var(--border2);
     color: var(--muted2);
     font-family: 'Space Mono', monospace;
-    font-size: 0.58rem;
+    font-size: 0.72rem;
     padding: 10px 12px;
     cursor: pointer;
     transition: all 0.15s;
@@ -607,7 +627,7 @@
   .upload-btn .ub-icon { font-size: 1rem; opacity: 0.6; }
 
   .filename-row {
-    font-size: 0.52rem;
+    font-size: 0.7rem;
     color: var(--muted);
     letter-spacing: 0.06em;
     overflow: hidden;
@@ -616,7 +636,7 @@
   }
   .filename-row span { color: var(--accent2); }
   .image-note {
-    font-size: 0.52rem;
+    font-size: 0.7rem;
     color: var(--muted2);
     line-height: 1.6;
     margin-top: 6px;
@@ -624,6 +644,48 @@
   }
   .image-note[hidden] { display: none; }
   .image-note.warn { color: var(--accent); }
+
+  /* ─── NARROW SCREEN (≤768px): 캔버스 위, 패널은 아래에서 스크롤 ─── */
+  @media (max-width: 768px) {
+    #topbar { padding: 8px 16px; gap: 10px; }
+    .top-title { font-size: 1.5rem; }
+    .top-status { display: none; } /* 하단 상태 바와 같은 정보 */
+
+    #workspace { flex-direction: column; }
+    #canvasArea {
+      order: -1;
+      flex: 0 0 auto;
+      height: 46vh;
+      height: 46dvh;
+      min-height: 220px;
+    }
+    #panel {
+      width: auto;
+      flex: 1 1 auto;
+      min-height: 0;
+      border-right: none;
+      border-top: 1px solid var(--accent);
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+    #panel::-webkit-scrollbar { width: 0; }
+    .sec-head { padding: 12px 16px; }
+    .sec-body { padding: 12px 16px 14px; }
+
+    #statusBar { gap: 2px 12px; padding: 4px 16px; }
+
+    input[type=range] { height: 4px; }
+    input[type=range]::-webkit-slider-thumb { width: 18px; height: 18px; }
+    .tx-btn, .color-btn, .erase-type-btn { padding-top: 9px; padding-bottom: 9px; }
+    .full-btn { padding: 11px 12px; }
+
+    button, .sec-head, .es-drop { -webkit-tap-highlight-color: transparent; }
+    #emptyState .es-drop { margin: 24px 16px 0; padding: 14px 18px; text-align: center; line-height: 1.7; }
+
+    .intro-title { font-size: clamp(3rem, 15vw, 5rem); }
+    .intro-version { right: 16px; bottom: 20px; }
+    .intro-hint { left: 16px; bottom: 24px; letter-spacing: 0.08em; }
+  }
 </style>
 </head>
 <body>
@@ -641,7 +703,7 @@
 <div id="app">
   <!-- Top bar -->
   <div id="topbar">
-    <span class="top-title">MOSAIC</span>
+    <button type="button" class="top-title" id="introReplayBtn" title="인트로 다시 보기">MOSAIC</button>
     <span class="top-tag">V2.3</span>
     <span class="top-spacer"></span>
     <div class="top-status">
@@ -669,7 +731,7 @@
         <div class="sec-body">
           <button class="upload-btn" id="uploadBtn">
             <span class="ub-icon">⬛</span>
-            클릭 / 드래그로 업로드
+            클릭 / 드래그 / 붙여넣기
           </button>
           <div class="filename-row" id="filenameRow">파일 없음</div>
           <div class="image-note" id="imageNote" hidden></div>
@@ -868,7 +930,7 @@
         <div id="emptyState">
           <div class="es-title">MOSAIC</div>
           <div class="es-sub">픽셀 아트 변환기</div>
-          <div class="es-drop" id="esDropZone">⬛&nbsp; 클릭 또는 드래그로 이미지 불러오기</div>
+          <div class="es-drop" id="esDropZone">⬛&nbsp; 클릭 · 드래그 · 붙여넣기로 이미지 불러오기</div>
         </div>
         <canvas id="outputCanvas"></canvas>
         <div id="processingOverlay">
@@ -903,7 +965,10 @@
   let typeIdx = 0;
   let typeTimer = null;
   let noiseRaf = null;
-  let introActive = true;
+  const INTRO_KEY = 'mosaic_intro_seen';
+  let introActive = !document.documentElement.classList.contains('intro-seen');
+  let sessionRestoreStarted = false;
+  let introHideTimer = null;
 
   // Noise animation
   const nc = noiseCanvas;
@@ -931,7 +996,6 @@
     nctx.putImageData(id, 0, 0);
     noiseRaf = requestAnimationFrame(drawNoise);
   }
-  drawNoise();
 
   // Type-in effect with glitch
   function typeIn() {
@@ -949,7 +1013,21 @@
       typeTimer = setTimeout(typeIn, typeIdx < 7 ? 80 : 55);
     }
   }
-  typeIn();
+
+  function startIntro() {
+    introActive = true;
+    cancelAnimationFrame(noiseRaf);
+    clearTimeout(typeTimer);
+    clearTimeout(introHideTimer);
+    typeIdx = 0;
+    document.documentElement.classList.remove('intro-seen');
+    appEl.classList.add('visible');
+    introEl.style.display = '';
+    introEl.classList.remove('fade-out');
+    resizeNoise();
+    drawNoise();
+    typeIn();
+  }
 
   function dismissIntro() {
     if (!introActive) return;
@@ -959,11 +1037,19 @@
     introTitle.textContent = FULL_TITLE;
     introEl.classList.add('fade-out');
     appEl.classList.add('visible');
-    setTimeout(() => { introEl.style.display = 'none'; }, 600);
+    introHideTimer = setTimeout(() => { introEl.style.display = 'none'; }, 600);
+    try { localStorage.setItem(INTRO_KEY, '1'); } catch (e) { /* ignore */ }
+    startSessionRestore();
+  }
+
+  function startSessionRestore() {
+    if (sessionRestoreStarted) return;
+    sessionRestoreStarted = true;
     tryRestoreSession();
   }
 
   introEl.addEventListener('click', dismissIntro);
+  document.getElementById('introReplayBtn').addEventListener('click', startIntro);
   document.addEventListener('keydown', e => {
     if (introActive) { dismissIntro(); return; }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
@@ -1081,8 +1167,17 @@
 
   // ─── ACCORDION ───────────────────────────────
   document.querySelectorAll('.sec-head').forEach(head => {
-    head.addEventListener('click', () => {
-      head.parentElement.classList.toggle('open');
+    const sec = head.parentElement;
+    head.setAttribute('role', 'button');
+    head.tabIndex = 0;
+    head.setAttribute('aria-expanded', String(sec.classList.contains('open')));
+    const toggle = () => {
+      sec.classList.toggle('open');
+      head.setAttribute('aria-expanded', String(sec.classList.contains('open')));
+    };
+    head.addEventListener('click', toggle);
+    head.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
     });
   });
 
@@ -1395,8 +1490,9 @@
       });
       state.imageId = saved.imageId || newImageId();
       suppressHistory = true;
-      await restoreSnapshot(saved, { push: false, save: false });
+      await restoreSnapshot(saved, { push: false, save: false, seq });
       suppressHistory = false;
+      if (seq !== loadSeq) return false;
       setFilename(info.name ? `복원됨 · ${info.name}` : '복원됨', info.name || '');
       historyStack = [snapshot('session-restored')];
       updateHistoryUI();
@@ -1424,6 +1520,7 @@
     state.outlineColor = normalizeHexColor(state.outlineColor, '#000000');
     state.eraseMode = false;
     await restoreMaskFromSnapshot(snap);
+    if (options.seq && options.seq !== loadSeq) return;
     syncUI();
     await renderPixelated({ preserveMask: true, commit: false });
     if (options.push) pushHistory('restore');
@@ -1599,6 +1696,21 @@
   }
   setupDropTarget(canvasWrap);
   setupDropTarget(document.getElementById('panel'));
+
+  // 클립보드 붙여넣기 (Ctrl+V / ⌘V) — 이미지가 없으면 기본 동작(텍스트 붙여넣기) 유지
+  document.addEventListener('paste', e => {
+    const dt = e.clipboardData;
+    if (!dt) return;
+    let file = null;
+    for (const item of Array.from(dt.items || [])) {
+      if (item.kind === 'file' && item.type.startsWith('image/')) { file = item.getAsFile(); if (file) break; }
+    }
+    if (!file) file = Array.from(dt.files || []).find(f => f.type.startsWith('image/')) || null;
+    if (!file) return;
+    e.preventDefault();
+    if (introActive) dismissIntro();
+    loadFile(file);
+  });
 
   uploadBtn.addEventListener('click', () => fileInput.click());
   esDropZone.addEventListener('click', () => fileInput.click());
@@ -2504,7 +2616,15 @@ function splitBucket(bucket) {
 
   syncUI();
   updateExportUI();
-  // tryRestoreSession() is called inside dismissIntro
+  if (introActive) {
+    drawNoise();
+    typeIn();
+  } else {
+    // 재방문: 인트로 없이 바로 시작
+    introEl.style.display = 'none';
+    appEl.classList.add('visible');
+    startSessionRestore();
+  }
 })();
 </script>
 </body>
