@@ -614,6 +614,15 @@
     white-space: nowrap;
   }
   .filename-row span { color: var(--accent2); }
+  .image-note {
+    font-size: 0.52rem;
+    color: var(--muted2);
+    line-height: 1.6;
+    margin-top: 6px;
+    white-space: pre-line;
+  }
+  .image-note[hidden] { display: none; }
+  .image-note.warn { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -662,6 +671,7 @@
             클릭 / 드래그로 업로드
           </button>
           <div class="filename-row" id="filenameRow">파일 없음</div>
+          <div class="image-note" id="imageNote" hidden></div>
           <input type="file" id="fileInput" accept="image/*" />
         </div>
       </div>
@@ -956,6 +966,7 @@
   const uploadBtn = $('uploadBtn');
   const fileInput = $('fileInput');
   const filenameRow = $('filenameRow');
+  const imageNote = $('imageNote');
   const canvasWrap = $('canvasWrap');
   const outputCanvas = $('outputCanvas');
   const emptyState = $('emptyState');
@@ -1008,10 +1019,16 @@
 
   // ─── STATE ────────────────────────────────────
   const SESSION_KEY = 'mosaic_v2_3_session';
+  const SESSION_IMAGE_KEY = 'mosaic_v2_3_session_image'; // IndexedDB 불가 시 폴백
+  const SESSION_SAVE_DELAY = 400;
+  const IDB_NAME = 'mosaic_v2_3';
+  const IDB_STORE = 'images';
+  const IDB_KEEP = 3;
+  const MAX_SOURCE_EDGE = 4096;
   const HISTORY_LIMIT = 30;
 
   const state = {
-    imageSrc: null,
+    imageId: null,
     pixelSize: 8,
     saturation: 100,
     targetColors: 65536,
@@ -1030,7 +1047,13 @@
     outlineColor: '#000000'
   };
 
+  // originalImage: 디코딩된 원본을 (필요 시 축소해) 한 번만 그려 둔 캔버스
   let originalImage = null;
+  let imageInfo = { name: '', origWidth: 0, origHeight: 0, downscaled: false };
+  let blockCache = null;
+  let loadSeq = 0;
+  let sessionSaveTimer = null;
+  let storageFailed = false;
   let renderTimer = null;
   let maskCanvas = null;
   let maskCtx = null;
@@ -1164,7 +1187,7 @@
   function snapshot(label = '') {
     return {
       label,
-      imageSrc: state.imageSrc,
+      imageId: state.imageId,
       settings: {
         pixelSize: state.pixelSize,
         saturation: state.saturation,
@@ -1190,7 +1213,7 @@
   }
 
   function pushHistory(label = '') {
-    if (suppressHistory || !state.imageSrc) return;
+    if (suppressHistory || !state.imageId) return;
     historyStack.push(snapshot(label));
     if (historyStack.length > HISTORY_LIMIT) historyStack.shift();
     updateHistoryUI();
@@ -1207,41 +1230,183 @@
     updateHistoryUI();
   }
 
+  // 세션: 설정/마스크(작음)는 sessionStorage, 이미지 본체는 IndexedDB에 한 번만 저장.
+  // 저장은 디바운스되어 연속 조작 중에는 마지막 한 번만 기록된다.
   function saveSession() {
-    if (!state.imageSrc) return;
-    try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(snapshot('session'))); }
-    catch (e) { console.warn('Session save skipped:', e); }
+    if (!state.imageId) return;
+    clearTimeout(sessionSaveTimer);
+    sessionSaveTimer = setTimeout(flushSession, SESSION_SAVE_DELAY);
   }
 
-  async function tryRestoreSession() {
-    const raw = sessionStorage.getItem(SESSION_KEY);
-    if (!raw) return false;
+  function flushSession() {
+    clearTimeout(sessionSaveTimer);
+    sessionSaveTimer = null;
+    if (!state.imageId) return;
+    const snap = snapshot('session');
+    snap.image = { ...imageInfo };
+    try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(snap)); }
+    catch (e) { console.warn('Session save failed:', e); setStorageFailed(true); }
+  }
+
+  window.addEventListener('pagehide', () => { if (sessionSaveTimer) flushSession(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && sessionSaveTimer) flushSession();
+  });
+
+  function setStorageFailed(on) {
+    storageFailed = on;
+    updateImageNote();
+  }
+
+  // ─── IMAGE STORE (IndexedDB) ─────────────────
+  let idbPromise = null;
+  function openImageDB() {
+    if (!idbPromise) {
+      idbPromise = new Promise((resolve, reject) => {
+        if (!window.indexedDB) { reject(new Error('IndexedDB unavailable')); return; }
+        let req;
+        try { req = indexedDB.open(IDB_NAME, 1); } catch (e) { reject(e); return; }
+        req.onupgradeneeded = () => { req.result.createObjectStore(IDB_STORE); };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error || new Error('IndexedDB open failed'));
+        req.onblocked = () => reject(new Error('IndexedDB blocked'));
+      });
+    }
+    return idbPromise;
+  }
+
+  function idbTx(mode, fn) {
+    return openImageDB().then(db => new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, mode);
+      const req = fn(tx.objectStore(IDB_STORE));
+      tx.oncomplete = () => resolve(req ? req.result : undefined);
+      tx.onerror = () => reject(tx.error || new Error('IndexedDB error'));
+      tx.onabort = () => reject(tx.error || new Error('IndexedDB aborted'));
+    }));
+  }
+
+  function pruneStoredImages(keepId) {
+    return idbTx('readwrite', store => {
+      const entries = [];
+      const cursorReq = store.openCursor();
+      cursorReq.onsuccess = () => {
+        const cur = cursorReq.result;
+        if (cur) { entries.push([cur.key, cur.value?.savedAt || 0]); cur.continue(); return; }
+        entries.sort((a, b) => b[1] - a[1]);
+        entries.slice(IDB_KEEP).forEach(([key]) => { if (key !== keepId) store.delete(key); });
+      };
+      return null;
+    });
+  }
+
+  function blobToDataURL(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function storeSessionImage(id, blob) {
     try {
-      const saved = JSON.parse(raw);
-      if (!saved?.imageSrc) return false;
-      suppressHistory = true;
-      await restoreSnapshot(saved, { push: false, save: false });
-      suppressHistory = false;
-      historyStack = [snapshot('session-restored')];
-      updateHistoryUI();
+      await idbTx('readwrite', store => store.put({ blob, savedAt: Date.now() }, id));
+      try { sessionStorage.removeItem(SESSION_IMAGE_KEY); } catch (e) { /* ignore */ }
+      pruneStoredImages(id).catch(e => console.warn('Image prune skipped:', e));
+      setStorageFailed(false);
       return true;
-    } catch (e) {
-      console.warn('Session restore failed:', e);
-      sessionStorage.removeItem(SESSION_KEY);
+    } catch (err) {
+      console.warn('IndexedDB save failed; falling back to sessionStorage:', err);
+    }
+    try {
+      const dataUrl = await blobToDataURL(blob);
+      sessionStorage.setItem(SESSION_IMAGE_KEY, JSON.stringify({ id, dataUrl }));
+      setStorageFailed(false);
+      return true;
+    } catch (err) {
+      console.warn('Session image save failed:', err);
+      setStorageFailed(true);
       return false;
     }
   }
 
+  async function loadSessionImage(id) {
+    try {
+      const rec = await idbTx('readonly', store => store.get(id));
+      if (rec && rec.blob) return rec.blob;
+    } catch (err) {
+      console.warn('IndexedDB read failed:', err);
+    }
+    try {
+      const raw = sessionStorage.getItem(SESSION_IMAGE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (saved && saved.id === id && saved.dataUrl) return await (await fetch(saved.dataUrl)).blob();
+      }
+    } catch (err) {
+      console.warn('Session image read failed:', err);
+    }
+    return null;
+  }
+
+  async function tryRestoreSession() {
+    let raw = null;
+    try { raw = sessionStorage.getItem(SESSION_KEY); } catch (e) { return false; }
+    if (!raw) return false;
+    const seq = ++loadSeq;
+    try {
+      const saved = JSON.parse(raw);
+      let blob = null;
+      let legacy = false;
+      if (saved?.imageId) {
+        blob = await loadSessionImage(saved.imageId);
+      } else if (saved?.imageSrc) {
+        // V2.3 이전 형식: 이미지 dataURL이 세션 JSON 안에 들어 있음 → 새 형식으로 이전
+        blob = await (await fetch(saved.imageSrc)).blob();
+        legacy = true;
+      }
+      if (!blob) throw new Error('Session image missing');
+      if (seq !== loadSeq) return false;
+      setProcessing(true);
+      const prepared = makeSourceCanvas(await decodeImageBlob(blob));
+      if (seq !== loadSeq) return false;
+      const info = saved.image || {};
+      setSourceImage(prepared.canvas, {
+        name: info.name || '',
+        origWidth: info.origWidth || prepared.origWidth,
+        origHeight: info.origHeight || prepared.origHeight,
+        downscaled: !!info.downscaled || prepared.downscaled
+      });
+      state.imageId = saved.imageId || newImageId();
+      suppressHistory = true;
+      await restoreSnapshot(saved, { push: false, save: false });
+      suppressHistory = false;
+      filenameRow.innerHTML = `<span>복원됨</span>`;
+      historyStack = [snapshot('session-restored')];
+      updateHistoryUI();
+      if (legacy) {
+        const toStore = prepared.downscaled ? await canvasToBlob(prepared.canvas, blob.type) : blob;
+        if (toStore) await storeSessionImage(state.imageId, toStore);
+        flushSession();
+      }
+      return true;
+    } catch (e) {
+      console.warn('Session restore failed:', e);
+      try { sessionStorage.removeItem(SESSION_KEY); } catch (err) { /* ignore */ }
+      return false;
+    } finally {
+      suppressHistory = false;
+      if (seq === loadSeq) setProcessing(false);
+    }
+  }
+
+  // 이미지가 이미 로드된 상태에서 설정/마스크만 되돌린다 (undo, 세션 복원 공용).
   async function restoreSnapshot(snap, options = {}) {
-    if (!snap?.imageSrc) return;
-    state.imageSrc = snap.imageSrc;
+    if (!snap || !originalImage) return;
     setObject(state, snap.settings || {});
     state.rotationDeg = normalizeAngle(state.rotationDeg || 0);
     state.outlineColor = normalizeHexColor(state.outlineColor, '#000000');
     state.eraseMode = false;
-    originalImage = await loadImage(state.imageSrc);
-    sOrigSize.textContent = `${originalImage.width}×${originalImage.height}`;
-    filenameRow.innerHTML = `<span>복원됨</span>`;
     await restoreMaskFromSnapshot(snap);
     syncUI();
     await renderPixelated({ preserveMask: true, commit: false });
@@ -1423,27 +1588,107 @@
   esDropZone.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
 
-  function loadFile(file) {
-    const reader = new FileReader();
-    reader.onload = async ev => {
-      state.imageSrc = ev.target.result;
-      originalImage = await loadImage(state.imageSrc);
+  function newImageId() {
+    return `img_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  }
 
-      state.pixelSize = 8; state.saturation = 100; state.targetColors = 65536;
-      state.rotationDeg = 0; state.flipX = false; state.flipY = false;
-      state.eraseMode = false; state.eraseType = 'flood'; state.tolerance = 30;
-      state.posterLum = 0; state.posterHue = 0; state.posterSat = 0;
-      state.outlineEnabled = false; state.outlineMode = 'outer'; state.outlineThickness = 1; state.outlineColor = '#000000';
-      maskCanvas = null; maskCtx = null; maskMeta = null; historyStack = [];
+  async function decodeImageBlob(blob) {
+    const url = URL.createObjectURL(blob);
+    try { return await loadImage(url); }
+    finally { URL.revokeObjectURL(url); }
+  }
 
-      sOrigSize.textContent = `${originalImage.width}×${originalImage.height}`;
-      filenameRow.innerHTML = `<span>${file.name}</span>`;
-      syncUI();
-      await renderPixelated({ preserveMask: false, commit: false });
-      pushHistory('load');
-      saveSession();
-    };
-    reader.readAsDataURL(file);
+  // 디코딩된 이미지를 캔버스에 한 번만 그린다. 긴 변이 MAX_SOURCE_EDGE를 넘으면 비율 유지 축소.
+  function makeSourceCanvas(img) {
+    const w0 = img.naturalWidth || img.width;
+    const h0 = img.naturalHeight || img.height;
+    const scale = Math.min(1, MAX_SOURCE_EDGE / Math.max(w0, h0));
+    const w = Math.max(1, Math.round(w0 * scale));
+    const h = Math.max(1, Math.round(h0 * scale));
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const cctx = c.getContext('2d');
+    cctx.imageSmoothingEnabled = true;
+    cctx.imageSmoothingQuality = 'high';
+    cctx.drawImage(img, 0, 0, w, h);
+    return { canvas: c, origWidth: w0, origHeight: h0, downscaled: scale < 1 };
+  }
+
+  function canvasToBlob(canvas, type) {
+    const outType = type === 'image/jpeg' ? 'image/jpeg' : 'image/png';
+    return new Promise(resolve => canvas.toBlob(resolve, outType, 0.92));
+  }
+
+  function setSourceImage(canvas, info) {
+    originalImage = canvas;
+    blockCache = null;
+    imageInfo = { ...info };
+    const w = canvas.width, h = canvas.height;
+    sOrigSize.textContent = info.downscaled
+      ? `${info.origWidth}×${info.origHeight}→${w}×${h}`
+      : `${w}×${h}`;
+    updateImageNote();
+  }
+
+  function updateImageNote() {
+    const notes = [];
+    if (originalImage && imageInfo.downscaled) {
+      notes.push(`큰 이미지: 긴 변 ${MAX_SOURCE_EDGE}px로 축소 (${imageInfo.origWidth}×${imageInfo.origHeight} → ${originalImage.width}×${originalImage.height})`);
+    }
+    if (storageFailed) notes.push('⚠ 세션 저장 실패 — 새로고침 시 복원되지 않습니다');
+    imageNote.textContent = notes.join('\n');
+    imageNote.classList.toggle('warn', storageFailed);
+    imageNote.hidden = notes.length === 0;
+  }
+
+  async function loadFile(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    const seq = ++loadSeq;
+    setProcessing(true);
+    await sleepFrame();
+    let prepared;
+    try {
+      prepared = makeSourceCanvas(await decodeImageBlob(file));
+    } catch (err) {
+      console.warn('Image load failed:', err);
+      if (seq === loadSeq) {
+        setProcessing(false);
+        filenameRow.textContent = '이미지를 불러올 수 없습니다';
+      }
+      return;
+    }
+    if (seq !== loadSeq) return;
+
+    clearTimeout(sessionSaveTimer);
+    storageFailed = false;
+    state.imageId = newImageId();
+    setSourceImage(prepared.canvas, {
+      name: file.name || '',
+      origWidth: prepared.origWidth,
+      origHeight: prepared.origHeight,
+      downscaled: prepared.downscaled
+    });
+
+    state.pixelSize = 8; state.saturation = 100; state.targetColors = 65536;
+    state.rotationDeg = 0; state.flipX = false; state.flipY = false;
+    state.eraseMode = false; state.eraseType = 'flood'; state.tolerance = 30;
+    state.posterLum = 0; state.posterHue = 0; state.posterSat = 0;
+    state.outlineEnabled = false; state.outlineMode = 'outer'; state.outlineThickness = 1; state.outlineColor = '#000000';
+    maskCanvas = null; maskCtx = null; maskMeta = null; historyStack = [];
+
+    filenameRow.innerHTML = `<span>${file.name}</span>`;
+    syncUI();
+    await renderPixelated({ preserveMask: false, commit: false });
+    setProcessing(false);
+    pushHistory('load');
+
+    // 이미지 본체는 새 이미지를 불러올 때 한 번만 저장 (축소된 경우 축소본)
+    const id = state.imageId;
+    const blob = prepared.downscaled ? await canvasToBlob(prepared.canvas, file.type) : file;
+    if (seq !== loadSeq || id !== state.imageId) return;
+    if (blob) await storeSessionImage(id, blob);
+    else setStorageFailed(true);
+    saveSession();
   }
 
   // ─── CONTROLS ────────────────────────────────
@@ -1704,10 +1949,10 @@
     if (!originalImage) return;
     const seq = ++renderSeq;
 
-    const sourceCanvas = buildTransformedSourceCanvas();
+    const sourceSize = getTransformedSize();
     const blockSize = state.pixelSize;
     const sat = state.saturation / 100;
-    const W = sourceCanvas.width, H = sourceCanvas.height;
+    const W = sourceSize.width, H = sourceSize.height;
     lastRenderedSourceSize = { width: W, height: H };
 
     const sw = Math.max(1, Math.ceil(W / blockSize));
@@ -1716,10 +1961,8 @@
     const small = document.createElement('canvas');
     small.width = sw; small.height = sh;
     const sc = small.getContext('2d', { willReadFrequently: true });
-    sc.imageSmoothingEnabled = true;
-    sc.drawImage(sourceCanvas, 0, 0, sw, sh);
-
-    const imageData = sc.getImageData(0, 0, sw, sh);
+    const imageData = sc.createImageData(sw, sh);
+    imageData.data.set(getBaseBlockData(W, H, sw, sh));
     const data = imageData.data;
 
     // Saturation
@@ -1876,21 +2119,38 @@
     outputCanvas.style.height = `${Math.max(1, Math.round(sh * finalScale))}px`;
   }
 
-  function buildTransformedSourceCanvas() {
+  // 회전된 경계 상자 크기 (실제 큰 캔버스는 만들지 않는다).
+  function getTransformedSize() {
     const w = originalImage.width, h = originalImage.height;
     const rad = state.rotationDeg * Math.PI / 180;
     const cos = Math.abs(Math.cos(rad)), sin = Math.abs(Math.sin(rad));
-    const outW = Math.max(1, Math.ceil(w*cos + h*sin));
-    const outH = Math.max(1, Math.ceil(w*sin + h*cos));
+    return {
+      width: Math.max(1, Math.ceil(w*cos + h*sin)),
+      height: Math.max(1, Math.ceil(w*sin + h*cos))
+    };
+  }
+
+  // 회전/반전된 원본을 블록 해상도(sw×sh)로 바로 그린 픽셀을 캐시한다.
+  // 채도/포스터/색상 등 슬라이더는 이 캐시를 재사용하고, 원본을 다시 디코딩하지 않는다.
+  function getBaseBlockData(W, H, sw, sh) {
+    const key = `${state.rotationDeg}|${state.flipX ? 1 : 0}|${state.flipY ? 1 : 0}|${sw}x${sh}`;
+    if (blockCache && blockCache.source === originalImage && blockCache.key === key) {
+      return blockCache.data;
+    }
+    const w = originalImage.width, h = originalImage.height;
     const c = document.createElement('canvas');
-    c.width = outW; c.height = outH;
+    c.width = sw; c.height = sh;
     const cctx = c.getContext('2d', { willReadFrequently: true });
-    cctx.clearRect(0, 0, outW, outH);
-    cctx.translate(outW/2, outH/2);
-    cctx.rotate(rad);
+    cctx.imageSmoothingEnabled = true;
+    cctx.clearRect(0, 0, sw, sh);
+    cctx.scale(sw / W, sh / H);
+    cctx.translate(W/2, H/2);
+    cctx.rotate(state.rotationDeg * Math.PI / 180);
     cctx.scale(state.flipX ? -1 : 1, state.flipY ? -1 : 1);
     cctx.drawImage(originalImage, -w/2, -h/2);
-    return c;
+    const data = cctx.getImageData(0, 0, sw, sh).data;
+    blockCache = { source: originalImage, key, data };
+    return data;
   }
 
   function updateActualColorCount() {
