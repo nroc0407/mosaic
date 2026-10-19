@@ -349,6 +349,7 @@
   .color-btn:hover { border-color: var(--accent2); }
   .color-btn.active { border-color: var(--accent); background: rgba(255,60,95,0.12); color: var(--accent); }
   .color-btn.active strong { color: var(--accent); }
+  .export-grid { grid-template-columns: repeat(4, 1fr); }
 
   /* Transform buttons */
   .tx-grid {
@@ -845,6 +846,16 @@
           <span class="sec-arrow">▶</span>
         </div>
         <div class="sec-body">
+          <div class="ctrl-row" style="margin-bottom:6px;">
+            <span class="ctrl-label">출력 크기</span>
+          </div>
+          <div class="color-grid export-grid" id="exportScaleBtns">
+            <button class="color-btn" data-scale="1"><strong>×1</strong>블록</button>
+            <button class="color-btn active" data-scale="orig"><strong>원본</strong>크기</button>
+            <button class="color-btn" data-scale="4"><strong>×4</strong>확대</button>
+            <button class="color-btn" data-scale="8"><strong>×8</strong>확대</button>
+          </div>
+          <div class="mini-note" id="exportSizeNote">출력 —</div>
           <button class="full-btn ghost" id="downloadBtn" disabled>PNG 다운로드</button>
         </div>
       </div>
@@ -987,6 +998,7 @@
   const colorSlider = $('colorCount');
   const colorVal = $('colorVal');
   const downloadBtn = $('downloadBtn');
+  const exportSizeNote = $('exportSizeNote');
 
   const posterLumSlider = $('posterLum');
   const posterLumVal = $('posterLumVal');
@@ -1060,7 +1072,7 @@
   let maskMeta = null;
   let historyStack = [];
   let suppressHistory = false;
-  let lastRenderedSourceSize = { width: 0, height: 0 };
+  let lastRenderedSourceSize = { width: 0, height: 0, blockSize: 0 };
   let renderSeq = 0;
 
   // ─── ACCORDION ───────────────────────────────
@@ -1864,12 +1876,76 @@
 
   undoBtn.addEventListener('click', undo);
 
+  // ─── EXPORT ──────────────────────────────────
+  // ×1 = 블록 격자 그대로, 원본 = 변환 후 원본(축소본) 크기, ×N = 블록 격자 N배.
+  // 테두리는 출력 캔버스에 그려져 있으므로 함께 확대된다 (최근접 보간).
+  const EXPORT_KEY = 'mosaic_v2_3_export_scale';
+  const EXPORT_SCALES = ['1', 'orig', '4', '8'];
+  const MAX_EXPORT_SIDE = 16384;
+  const MAX_EXPORT_AREA = 16384 * 16384 / 4;
+  let exportScale = 'orig';
+  try {
+    const savedScale = localStorage.getItem(EXPORT_KEY);
+    if (EXPORT_SCALES.includes(savedScale)) exportScale = savedScale;
+  } catch (e) { /* ignore */ }
+
+  function getExportPlan() {
+    const sw = outputCanvas.width, sh = outputCanvas.height;
+    if (!sw || !sh || !lastRenderedSourceSize.blockSize) return null;
+    const bs = lastRenderedSourceSize.blockSize;
+    const isOrig = exportScale === 'orig';
+    const requested = isOrig ? bs : (parseInt(exportScale, 10) || 1);
+    const sizeFor = f => isOrig
+      ? { width: Math.min(sw * f, Math.ceil(lastRenderedSourceSize.width * f / bs)),
+          height: Math.min(sh * f, Math.ceil(lastRenderedSourceSize.height * f / bs)) }
+      : { width: sw * f, height: sh * f };
+    let factor = requested;
+    let size = sizeFor(factor);
+    while (factor > 1 && (size.width > MAX_EXPORT_SIDE || size.height > MAX_EXPORT_SIDE || size.width * size.height > MAX_EXPORT_AREA)) {
+      factor--;
+      size = sizeFor(factor);
+    }
+    return { ...size, factor, limited: factor < requested };
+  }
+
+  function updateExportUI() {
+    document.querySelectorAll('#exportScaleBtns .color-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.scale === exportScale);
+    });
+    const plan = getExportPlan();
+    exportSizeNote.textContent = plan
+      ? `출력 ${plan.width}×${plan.height}px${plan.limited ? ` (크기 제한으로 ×${plan.factor})` : ''}`
+      : '출력 —';
+  }
+
+  document.querySelectorAll('#exportScaleBtns .color-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      exportScale = b.dataset.scale;
+      try { localStorage.setItem(EXPORT_KEY, exportScale); } catch (e) { /* ignore */ }
+      updateExportUI();
+    });
+  });
+
   downloadBtn.addEventListener('click', () => {
-    if (!outputCanvas.width) return;
-    const a = document.createElement('a');
-    a.download = 'mosaic.png';
-    a.href = outputCanvas.toDataURL('image/png');
-    a.click();
+    const plan = getExportPlan();
+    if (!plan) return;
+    let out = outputCanvas;
+    if (plan.width !== outputCanvas.width || plan.height !== outputCanvas.height) {
+      out = document.createElement('canvas');
+      out.width = plan.width; out.height = plan.height;
+      const octx = out.getContext('2d');
+      octx.imageSmoothingEnabled = false;
+      octx.drawImage(outputCanvas, 0, 0, outputCanvas.width * plan.factor, outputCanvas.height * plan.factor);
+    }
+    out.toBlob(blob => {
+      if (!blob) { console.warn('PNG export failed'); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.download = 'mosaic.png';
+      a.href = url;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }, 'image/png');
   });
 
   // ─── ERASE ───────────────────────────────────
@@ -1953,7 +2029,6 @@
     const blockSize = state.pixelSize;
     const sat = state.saturation / 100;
     const W = sourceSize.width, H = sourceSize.height;
-    lastRenderedSourceSize = { width: W, height: H };
 
     const sw = Math.max(1, Math.ceil(W / blockSize));
     const sh = Math.max(1, Math.ceil(H / blockSize));
@@ -2019,6 +2094,7 @@
     sc.putImageData(imageData, 0, 0);
     outputCanvas.width = sw;
     outputCanvas.height = sh;
+    lastRenderedSourceSize = { width: W, height: H, blockSize };
     ctx.clearRect(0, 0, sw, sh);
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(small, 0, 0, sw, sh, 0, 0, sw, sh);
@@ -2038,6 +2114,7 @@
     sColors.textContent = shownColorCount;
     updateActualColorCount();
     updateTransformStatus();
+    updateExportUI();
 
     if (options.commit && !suppressHistory) pushHistory('render');
     saveSession();
@@ -2414,6 +2491,7 @@ function splitBucket(bucket) {
   });
 
   syncUI();
+  updateExportUI();
   // tryRestoreSession() is called inside dismissIntro
 })();
 </script>
